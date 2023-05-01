@@ -1,6 +1,6 @@
 use crate::bindings::common::register_processor;
 use crate::bindings::masternode::process_mnlistdiff_from_message;
-use crate::common::ChainType;
+use crate::chain::common::ChainType;
 use crate::lib_tests::tests::{add_insight_lookup_default, FFIContext, get_block_hash_by_height_from_context, get_block_height_by_hash_from_context, get_llmq_snapshot_by_block_hash_from_context, get_masternode_list_by_block_hash_from_cache, get_merkle_root_by_hash_default, hash_destroy_default, masternode_list_destroy_default, masternode_list_save_in_cache, message_from_file, save_llmq_snapshot_in_cache, should_process_diff_with_range_default, snapshot_destroy_default};
 use crate::tests::block_store::init_mainnet_store;
 

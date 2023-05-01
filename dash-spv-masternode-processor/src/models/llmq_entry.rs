@@ -1,7 +1,8 @@
 use byte::{BytesExt, ctx::{Bytes, Endian}, TryRead, LE};
 use hashes::hex::ToHex;
 use std::convert::Into;
-use crate::common::{LLMQType, LLMQVersion};
+use crate::chain::common::LLMQType;
+use crate::common::LLMQVersion;
 use crate::consensus::{encode::VarInt, Encodable, WriteExt};
 use crate::crypto::{byte_util::AsBytes, data_ops::Data, UInt256, UInt384, UInt768};
 use crate::keys::BLSKey;

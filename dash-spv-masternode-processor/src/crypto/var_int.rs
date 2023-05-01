@@ -15,7 +15,7 @@ impl<'a> TryRead<'a, Endian> for VarInt {
     }
 }
 
-impl<'a> TryWrite for &'a VarInt {
+impl TryWrite for VarInt {
     #[inline]
     fn try_write(self, bytes: &mut [u8], _ctx: ()) -> byte::Result<usize> {
         check_len(bytes, self.len())?;
@@ -25,5 +25,16 @@ impl<'a> TryWrite for &'a VarInt {
         })
     }
 }
+
+// impl<'a> TryWrite for &'a VarInt {
+//     #[inline]
+//     fn try_write(self, bytes: &mut [u8], _ctx: ()) -> byte::Result<usize> {
+//         check_len(bytes, self.len())?;
+//         Ok(match self.consensus_encode(bytes) {
+//             Ok(size) => size,
+//             _ => 0
+//         })
+//     }
+// }
 
 impl_bytes_decodable!(VarInt);

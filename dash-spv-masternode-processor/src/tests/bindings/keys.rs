@@ -1,10 +1,9 @@
 use std::ffi::CString;
 use hashes::hex::{FromHex, ToHex};
 use crate::bindings::keys::{key_bls_chaincode, key_bls_public_key, key_bls_with_bip32_seed_data, key_create_from_extended_public_key_data, key_extended_public_key_data, key_private_key_at_index_path, key_with_private_key};
+use crate::chain::common::ChainType;
 use crate::chain::derivation::{IIndexPath, IndexPath};
-use crate::common::ChainType;
-use crate::crypto::byte_util::ConstDecodable;
-use crate::crypto::{UInt256, UInt384};
+use crate::crypto::{byte_util::ConstDecodable, UInt256, UInt384};
 use crate::ffi::IndexPathData;
 use crate::keys::KeyKind;
 use crate::types::opaque_key::OpaqueKey;

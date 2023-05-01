@@ -48,3 +48,9 @@ impl io::Write for SecVec {
         self.inner.flush()
     }
 }
+
+impl AsRef<[u8]> for SecVec {
+    fn as_ref(&self) -> &[u8] {
+        self.inner.as_slice()
+    }
+}

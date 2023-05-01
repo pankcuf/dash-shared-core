@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
-use crate::{common, models};
+use crate::chain::common;
 use crate::crypto::UInt256;
+use crate::models;
 
 #[derive(Clone, Default)]
 pub struct MasternodeProcessorCache {

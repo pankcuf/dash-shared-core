@@ -1,7 +1,7 @@
 use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::slice;
-use crate::common::ChainType;
+use crate::chain::common::ChainType;
 use crate::crypto::{byte_util::ConstDecodable, UInt160};
 use crate::ffi::ByteArray;
 use crate::types::opaque_key::AsCStringPtr;

@@ -1,5 +1,5 @@
 use crate::chain::bip::bip38::BIP38;
-use crate::common::ChainType;
+use crate::chain::common::ChainType;
 use crate::keys::{ECDSAKey, IKey};
 
 #[test]

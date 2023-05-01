@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::ptr::null_mut;
 use crate::{common, models, tx, types};
+use crate::chain::common::LLMQType;
 use crate::crypto::UInt256;
 use crate::ffi::boxer::{boxed, boxed_vec};
 use crate::ffi::from::FromFFI;
@@ -315,7 +316,7 @@ impl ToFFI for common::Block {
 }
 
 pub fn encode_quorums_map(
-    quorums: &BTreeMap<common::LLMQType, BTreeMap<UInt256, models::LLMQEntry>>,
+    quorums: &BTreeMap<LLMQType, BTreeMap<UInt256, models::LLMQEntry>>,
 ) -> *mut *mut types::LLMQMap {
     boxed_vec(
         quorums

@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use hashes::hex::ToHex;
 use secp256k1::rand::{Rng, thread_rng};
-use crate::common::LLMQType;
+use crate::chain::common::LLMQType;
 use crate::crypto::byte_util::{Reversable, Zeroable};
 use crate::crypto::UInt256;
 use crate::models::{LLMQEntry, LLMQSnapshot, MasternodeEntry};

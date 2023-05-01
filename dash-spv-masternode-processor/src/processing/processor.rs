@@ -1,8 +1,7 @@
 use std::collections::BTreeMap;
 use std::ptr::null;
-use crate::{common, common::{LLMQParams, LLMQType}, models, types};
-use crate::chain::common::chain_type::IHaveChainSettings;
-use crate::common::ChainType;
+use crate::{common, models, types};
+use crate::chain::common::{ChainType, IHaveChainSettings, LLMQParams, LLMQType};
 use crate::crypto::{byte_util::{Reversable, Zeroable}, UInt256};
 use crate::ffi::boxer::boxed;
 use crate::ffi::callbacks;
@@ -229,7 +228,8 @@ impl MasternodeProcessor {
         let merkle_tree = common::MerkleTree {
             tree_element_count: list_diff.total_transactions,
             hashes: list_diff.merkle_hashes,
-            flags: list_diff.merkle_flags.as_slice(),
+            flags: list_diff.merkle_flags,
+            hash_function: Default::default()
         };
         self.cache_masternode_list(block_hash, masternode_list.clone(), cache);
         let needed_masternode_lists = cache.needed_masternode_lists.clone();

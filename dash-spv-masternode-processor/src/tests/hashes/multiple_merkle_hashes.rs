@@ -20,7 +20,7 @@ fn test_multiple_merkle_hashes() {
         UInt256::from_hex("bd6a344573ba1d6faf24f021324fa3360562404536246503c4cba372f94bfa4a")
             .unwrap();
     let tree_element_count = 4;
-    let flags = merkle_flags.as_slice();
+    // let flags = merkle_flags;
     let mut hashes = Vec::<UInt256>::new();
     let hashes_count = merkle_hashes.len() / 32;
     for i in 0..hashes_count {
@@ -32,7 +32,8 @@ fn test_multiple_merkle_hashes() {
     let merkle_tree = MerkleTree {
         tree_element_count,
         hashes: hashes.clone(),
-        flags,
+        flags: merkle_flags.clone(),
+        hash_function: Default::default()
     };
     let has_valid_coinbase = merkle_tree.has_root(desired_merkle_root);
     println!(
@@ -258,20 +259,6 @@ pub fn from_hex(s: &str) -> Vec<u8> {
         .step_by(2)
         .map(|i| u8::from_str_radix(&s[i..i + 2], 16).unwrap())
         .collect()
-}
-
-#[test]
-pub fn test_biguints_ops() {
-    let mut x = [0u8; 32];
-    x[0] = 0x32; // 50
-    let a = UInt256(x);
-    for i in 0..=32 {
-        println!("{}", a >> i);
-    }
-
-    let a = b"a0fcffffffffffffffffffffffffffffffffffffffffffffffffffffff4ffbff";
-    let b = b"100e000000000000000000000000000000000000000000000000000000000000";
-
 }
 
 fn check_script_elements(data: &[u8], exp_script_elements: Vec<ScriptElement>) {

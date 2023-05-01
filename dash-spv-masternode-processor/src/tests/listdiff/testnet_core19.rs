@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
 use bls_signatures::{BasicSchemeMPL, G1Element, G2Element, Scheme};
 use hashes::hex::FromHex;
-use crate::common::{ChainType, LLMQType, LLMQVersion, SocketAddress};
+use crate::chain::common::{ChainType, LLMQType};
+use crate::common::{LLMQVersion, SocketAddress};
 use crate::common::MasternodeType::{HighPerformance, Regular};
 use crate::consensus::encode::VarInt;
 use crate::crypto::{UInt128, UInt160, UInt256, UInt384, UInt768};

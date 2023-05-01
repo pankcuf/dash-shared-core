@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::slice;
 use crate::{common, models, tx, types};
+use crate::chain::common::LLMQType;
 use crate::consensus::encode;
 use crate::crypto::{byte_util::Reversable, UInt128, UInt160, UInt256, UInt384, UInt768};
 use crate::ffi::to::ToFFI;
@@ -130,7 +131,7 @@ impl FromFFI for types::MasternodeList {
                 BTreeMap::new(),
                 |mut acc, i| {
                     let llmq_map = *(*self.llmq_type_maps.add(i));
-                    let key = common::LLMQType::from(llmq_map.llmq_type);
+                    let key = LLMQType::from(llmq_map.llmq_type);
                     let value: BTreeMap<UInt256, models::LLMQEntry> = (0..llmq_map.count)
                         .into_iter()
                         .fold(BTreeMap::new(), |mut acc, j| {
