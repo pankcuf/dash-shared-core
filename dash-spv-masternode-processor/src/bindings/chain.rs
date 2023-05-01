@@ -1,7 +1,6 @@
 use std::ffi::CStr;
 use std::os::raw::c_char;
-use crate::chain::common::chain_type::DevnetType;
-use crate::common::ChainType;
+use crate::chain::common::{ChainType, DevnetType};
 use crate::ffi::ByteArray;
 use crate::types::opaque_key::AsCStringPtr;
 use crate::util::data_append::DataAppend;

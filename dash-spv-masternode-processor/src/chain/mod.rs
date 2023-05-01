@@ -1,8 +1,28 @@
 pub mod bip;
+pub mod block;
+pub mod chain;
+pub mod chain_lock;
+pub mod checkpoint;
 pub mod common;
 pub mod constants;
 pub mod derivation;
+pub mod ext;
+pub mod governance;
+pub mod masternode;
+pub mod network;
 pub mod params;
+pub mod spork;
+pub mod sync_count_info;
+pub mod sync_phase;
+pub mod sync_type;
 pub mod tx;
+pub mod wallet;
 
+pub use self::chain::Chain;
+pub use self::chain_lock::ChainLock;
+pub use self::checkpoint::Checkpoint;
 pub use self::params::{BIP32ScriptMap, DIP14ScriptMap, Params, ScriptMap, SporkParams};
+pub use self::sync_count_info::SyncCountInfo;
+pub use self::sync_phase::SyncPhase;
+pub use self::sync_type::SyncType;
+pub use self::wallet::Wallet;

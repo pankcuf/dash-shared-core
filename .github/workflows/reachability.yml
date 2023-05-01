@@ -1,0 +1,41 @@
+name: Reachability Tests
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  build:
+    name: Cargo test
+    runs-on: macOS-latest
+    steps:
+      - name: Install automake
+        run: |
+          brew install automake
+      - name: Checkout dash-shared-core
+        uses: actions/checkout@v2
+        with:
+          path: dash-shared-core
+          submodules: recursive
+      - name: Create LFS file list
+        run: |
+          git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
+        working-directory: ./dash-shared-core
+      - name: Restore LFS cache
+        uses: actions/cache@v2
+        id: lfs-cache
+        with:
+          path: dash-shared-core/.git/lfs
+          key: lfs-${{ hashFiles('.lfs-assets-id') }}-v1
+      - name: Rustup add targets
+        run: rustup target add aarch64-apple-ios x86_64-apple-ios aarch64-apple-ios-sim
+      - name: Run tests
+        working-directory: ./dash-shared-core/reachability
+        run: |
+          cargo test --package reachability --lib tests

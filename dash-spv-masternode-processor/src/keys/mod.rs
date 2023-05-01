@@ -8,6 +8,7 @@ pub mod crypto_data;
 pub use self::key::Key;
 pub use self::key::KeyKind;
 pub use self::bls_key::BLSKey;
+pub use self::crypto_data::CryptoData;
 pub use self::ecdsa_key::ECDSAKey;
 pub use self::ed25519_key::ED25519Key;
 

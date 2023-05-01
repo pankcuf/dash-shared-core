@@ -1,15 +1,49 @@
 use std::os::raw::c_void;
 
-// const K_CCENCRYPT: u32 = 0;
-// const K_CCDECRYPT: u32 = 1;
-
 pub enum Operation {
     Encrypt = 0,
     Decrypt = 1,
 }
 
-
 extern "C" {
+    /// Stateless, one-shot encrypt or decrypt operation. This basically performs a sequence of
+    /// CCCrytorCreate(), CCCryptorUpdate(), CCCryptorFinal(), and CCCryptorRelease().
+    ///
+    /// # Arguments
+    ///
+    /// * `op`: Defines the basic operation: kCCEncrypt or kCCDecrypt.
+    /// * `alg`: Defines the encryption algorithm.
+    /// * `options`: A word of flags defining options. See discussion for the CCOptions type.
+    /// * `key`: Raw key material, length keyLength bytes.
+    /// * `key_length`: Length of key material. Must be appropriate for the select algorithm.
+    /// Some algorithms may provide for varying key lengths.
+    /// * `iv`: Initialization vector, optional. Used for Cipher Block Chaining (CBC) mode. If
+    /// present, must be the same length as the selected algorithm's block size. If CBC mode is
+    /// selected (by the absence of any mode bits in the options flags) and no IV is present, a
+    /// NULL (all zeroes) IV will be used. This is ignored if ECB mode is used or if a stream
+    /// cipher algorithm is selected. For sound encryption, always initialize IV with random data.
+    /// * `data_in`: Data to encrypt or decrypt, length dataInLength bytes.
+    /// * `data_in_length`: Length of data to encrypt or decrypt.
+    /// * `data_out`: Result is written here. Allocated by caller. Encryption and decryption can be
+    /// performed "in-place", with the same buffer used for input and output.
+    /// * `data_out_available`: The size of the dataOut buffer in bytes.
+    /// * `data_out_moved`: On successful return, the number of bytes written to dataOut. If
+    /// kCCBufferTooSmall is returned as a result of insufficient buffer space being provided, the
+    /// required buffer space is returned here.
+    ///
+    /// returns: CryptorStatus
+    ///
+    /// kCCBufferTooSmall: indicates insufficent space in the dataOut buffer. In this case, the *dataOutMoved parameter will indicate the size of the buffer needed to complete the operation. The operation can be retried with minimal runtime penalty.
+    ///
+    /// kCCAlignmentError: indicates that dataInLength was not properly aligned. This can only be returned for block ciphers, and then only when decrypting or when encrypting with block with padding disabled.
+    ///
+    /// kCCDecodeError: Indicates improperly formatted ciphertext or a "wrong key" error; occurs only during decrypt operations.
+    /// # Examples
+    ///
+    /// ```
+    ///
+    /// ```
+    /// API_AVAILABLE(macos(10.4), ios(2.0));
     fn CCCrypt(
         operation: u32,
         alg: u32,

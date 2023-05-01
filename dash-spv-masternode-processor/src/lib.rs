@@ -5,6 +5,8 @@ pub mod processing;
 
 pub extern crate bitcoin_hashes as hashes;
 pub extern crate secp256k1;
+#[macro_use] extern crate bitflags;
+extern crate core;
 #[macro_use] extern crate log;
 extern crate simplelog;
 
@@ -26,14 +28,19 @@ pub mod macros;
 pub mod bindings;
 pub mod blockdata;
 pub mod chain;
+pub mod chains_manager;
 pub mod common;
 pub mod consensus;
 pub mod crypto;
+pub mod environment;
 pub mod ffi;
 pub mod hash_types;
 pub mod keys;
+pub mod manager;
 pub mod models;
 pub mod network;
+pub mod platform;
+pub mod storage;
 pub mod tx;
 pub mod types;
 pub mod util;

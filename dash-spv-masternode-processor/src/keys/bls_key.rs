@@ -61,7 +61,7 @@ impl BLSKey {
 
 impl IKey for BLSKey {
     fn r#type(&self) -> KeyKind {
-        KeyKind::BLS // &KeyType::BLSBasic
+        if self.use_legacy { KeyKind::BLS } else { KeyKind::BLSBasic }
     }
     fn sign(&self, data: &[u8]) -> Vec<u8> {
         self.sign_digest(UInt256::from(data)).as_bytes().to_vec()

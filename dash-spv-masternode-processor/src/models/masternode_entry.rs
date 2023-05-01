@@ -20,6 +20,7 @@ pub struct MasternodeEntry {
     pub provider_registration_transaction_hash: UInt256,
     pub confirmed_hash: UInt256,
     pub confirmed_hash_hashed_with_provider_registration_transaction_hash: Option<UInt256>,
+    // TODO: migrate on SocketAddr
     pub socket_address: SocketAddress,
     pub operator_public_key: OperatorPublicKey,
     pub previous_operator_public_keys: BTreeMap<Block, OperatorPublicKey>,

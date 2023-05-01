@@ -39,6 +39,16 @@ pub trait BytesDecodable<'a, T: TryRead<'a, Endian>> {
     fn from_bytes(bytes: &'a [u8], offset: &mut usize) -> Option<T>;
 }
 
+// todo: migrate?
+// #[repr(C, align(32))]
+// pub union UInt256 {
+//     pub u8: [u8; 256 / 8],
+//     pub u16: [u16; 256 / 16],
+//     pub u32: [u32; 256 / 32],
+//     pub u64: [u64; 256 / 64],
+// }
+
+
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct UInt128(pub [u8; 16]);
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -409,7 +419,7 @@ impl std::ops::Shl<usize> for UInt256 {
 
 pub fn add_one_le(a: UInt256) -> UInt256 {
     let mut r = [0u8; 32];
-    r[0..8].clone_from_slice(&1u64.to_le_bytes());
+    r[0..8].copy_from_slice(&1u64.to_le_bytes());
     add_le(a, UInt256(r))
 }
 
@@ -421,7 +431,7 @@ pub fn add_le(x: UInt256, a: UInt256) -> UInt256 {
         let xb: [u8; 4] = clone_into_array(&x.0[i..len]);
         let ab: [u8; 4] = clone_into_array(&a.0[i..len]);
         let sum = u32::from_le_bytes(xb) as u64 + u32::from_le_bytes(ab) as u64 + carry;
-        r[i..len].clone_from_slice(&(sum as u32).to_le_bytes());
+        r[i..len].copy_from_slice(&(sum as u32).to_le_bytes());
         carry = sum >> 32;
     }
     UInt256(r)
@@ -435,7 +445,7 @@ fn multiply_u32_le(mut a: UInt256, b: u32) -> UInt256 {
         let len = i + 4;
         let ab: [u8; 4] = clone_into_array(&a.0[i..len]);
         let n = carry + (b as u64) * (u32::from_le_bytes(ab) as u64);
-        a.0[i..len].clone_from_slice(&(n as u32 & 0xffffffff).to_le_bytes());
+        a.0[i..len].copy_from_slice(&(n as u32 & 0xffffffff).to_le_bytes());
         carry = n >> 32;
     }
     return a;

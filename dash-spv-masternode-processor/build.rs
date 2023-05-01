@@ -14,6 +14,7 @@ fn main() {
         extra_bindings: includes,
         ..Default::default()
     };
+
     cbindgen::generate_with_config(&crate_dir, config)
         .unwrap()
         .write_to_file("target/dash_spv_masternode_processor.h");

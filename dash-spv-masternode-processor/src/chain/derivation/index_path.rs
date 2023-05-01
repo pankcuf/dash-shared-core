@@ -146,7 +146,7 @@ pub trait IIndexPath: Sized {
         if self.is_empty() {
             format!("")
         } else {
-            self.indexes().into_iter().map(|index| index.to_string()).collect::<Vec<_>>().join(".")
+            self.indexes().into_iter().map(|index| format!("{}", index)).collect::<Vec<_>>().join(".")
         }
     }
     fn index_path_enumerated_string(&self) -> String {
@@ -231,13 +231,6 @@ impl IndexPath<u32> {
         IndexPath::new(indexes_slice.iter().map(|&index| index as u32).collect())
     }
 }
-
-// impl IndexPath<UInt256> {
-//     pub fn from_ffi(indexes: *const [u8; 32], hardened_indexes: *const u8, length: usize) -> Self {
-//         let indexes_slice = unsafe { slice::from_raw_parts(indexes, length) };
-//         IndexPath::new(indexes_slice.iter().map(|&index| UInt256(index)).collect())
-//     }
-// }
 
 impl<'a> TryRead<'a, usize> for IndexPath<UInt256> {
     #[inline]

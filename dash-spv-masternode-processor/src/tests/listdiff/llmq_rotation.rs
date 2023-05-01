@@ -462,7 +462,6 @@ fn test_devnet_333() {
         cache,
         blocks: vec![]
     }) as *mut _ as *mut std::ffi::c_void;
-    // let cache = unsafe { processor_create_cache() };
     let processor = unsafe {
         register_processor(
             get_merkle_root_by_hash_default_333,

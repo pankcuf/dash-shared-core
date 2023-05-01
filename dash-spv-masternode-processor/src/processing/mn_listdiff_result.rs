@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
-use crate::{common, models, types};
+use crate::{models, types};
+use crate::chain::common;
 use crate::crypto::UInt256;
 use crate::ffi::boxer::{boxed, boxed_vec};
 use crate::ffi::to::{encode_masternodes_map, encode_quorums_map, ToFFI};

@@ -1,9 +1,14 @@
-use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+use std::collections::HashMap;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4};
 use hashes::hex::FromHex;
-use crate::chain::{BIP32ScriptMap, DIP14ScriptMap, ScriptMap, SporkParams};
+use serde::Deserialize;
+use crate::chain::{BIP32ScriptMap, DIP14ScriptMap, ScriptMap, SporkParams, SyncType};
+use crate::chain::common::LLMQType;
 use crate::chain::params::DUFFS;
-use crate::common::LLMQType;
+use crate::chain::wallet::seed::Seed;
 use crate::crypto::{byte_util::Reversable, UInt256};
+use crate::manager::peer_manager::SETTINGS_FIXED_PEER_KEY;
+use crate::util::data_ops::short_hex_string_from;
 
 pub trait IHaveChainSettings {
     fn genesis_hash(&self) -> UInt256;
@@ -449,4 +454,131 @@ impl ChainType {
         }
     }
 
+}
+
+
+const CHAIN_WALLETS_KEY: &str = "CHAIN_WALLETS_KEY";
+const CHAIN_STANDALONE_DERIVATIONS_KEY: &str = "CHAIN_STANDALONE_DERIVATIONS_KEY";
+const REGISTERED_PEERS_KEY: &str = "REGISTERED_PEERS_KEY";
+const CHAIN_VOTING_KEYS_KEY: &str = "CHAIN_VOTING_KEYS_KEY";
+
+pub const LAST_SYNCED_GOVERANCE_OBJECTS: &str = "LAST_SYNCED_GOVERANCE_OBJECTS";
+pub const LAST_SYNCED_MASTERNODE_LIST: &str = "LAST_SYNCED_MASTERNODE_LIST";
+pub const SYNC_STARTHEIGHT_KEY: &str = "SYNC_STARTHEIGHT";
+pub const TERMINAL_SYNC_STARTHEIGHT_KEY: &str = "TERMINAL_SYNC_STARTHEIGHT";
+pub const FEE_PER_BYTE_KEY: &str = "FEE_PER_BYTE";
+
+
+
+impl ChainType {
+    pub fn unique_id(&self) -> String {
+        short_hex_string_from(&self.genesis_hash().0)
+    }
+
+    /// Keychain Strings
+
+    pub fn chain_wallets_key(&self) -> String {
+        format!("{}_{}", CHAIN_WALLETS_KEY, self.unique_id())
+    }
+
+    pub fn chain_standalone_derivation_paths_key(&self) -> String {
+        format!("{}_{}", CHAIN_STANDALONE_DERIVATIONS_KEY, self.unique_id())
+    }
+
+    pub fn registered_peers_key(&self) -> String {
+        format!("{}_{}", REGISTERED_PEERS_KEY, self.unique_id())
+    }
+
+    pub fn settings_fixed_peer_key(&self) -> String {
+        format!("{}_{}", SETTINGS_FIXED_PEER_KEY, self.unique_id())
+    }
+
+    pub fn voting_keys_key(&self) -> String {
+        format!("{}_{}", CHAIN_VOTING_KEYS_KEY, self.unique_id())
+    }
+
+    pub fn chain_sync_start_height_key(&self) -> String {
+        format!("{}_{}", SYNC_STARTHEIGHT_KEY, self.unique_id())
+    }
+
+    pub fn terminal_sync_start_height_key(&self) -> String {
+        format!("{}_{}", TERMINAL_SYNC_STARTHEIGHT_KEY, self.unique_id())
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct PeerPlist {
+    array: Vec<u32>,
+}
+
+// const MAINNET_FIXED_PEERS: &str = include_str!("../../../resources/FixedPeers.plist");
+// const TESTNET_FIXED_PEERS: &str = include_str!("../../../resources/TestnetFixedPeers.plist");
+
+const FIXED_PEERS: &[u8] = include_bytes!("../../../resources/FixedPeers.plist");
+// const TESTNET_FIXED_PEERS: &[u8] = include_bytes!("../../../resources/TestnetFixedPeers.plist");
+
+impl ChainType {
+    pub fn load_fixed_peer_addresses(&self) -> Vec<IpAddr> {
+        match self {
+            Self::MainNet => {
+                // plist::from_bytes()
+                let plist = plist::from_bytes::<HashMap<String, Vec<u32>>>(FIXED_PEERS).unwrap();
+                let peers = plist.get("mainnet").cloned().unwrap();
+                peers
+                // plist::Value::from_file("../../../resources/FixedPeers.plist").unwrap().as_array().iter().map(|v|)
+                // get_plist::<PeerPlist>(MAINNET_FIXED_PEERS).unwrap().array
+            },
+            Self::TestNet => {
+                let plist = plist::from_bytes::<HashMap<String, Vec<u32>>>(FIXED_PEERS).unwrap();
+                let peers = plist.get("testnet").cloned().unwrap();
+                peers
+                // plist::from_bytes::<HashMap<String, Vec<u32>>>(FIXED_PEERS).unwrap().get("testnet").unwrap()
+                // plist::from_bytes::<PeerPlist>(TESTNET_FIXED_PEERS).unwrap().array
+                // get_plist::<PeerPlist>(TESTNET_FIXED_PEERS).unwrap().array
+            },
+            _ => panic!("No fixed peers for devnet"),
+        }.into_iter().map(|value| IpAddr::from(value.to_be_bytes())).collect()
+    }
+}
+
+impl ChainType {
+    pub fn seed_for_seed_phrase<L: bip0039::Language>(&self, seed_phrase: &str) -> Option<Seed> {
+        Seed::from_phrase::<L>(seed_phrase, self.genesis_hash())
+    }
+    pub fn seed_for_seed_data<L: bip0039::Language>(&self, seed_data: Vec<u8>) -> Seed {
+        Seed::from::<L>(seed_data, self.genesis_hash())
+    }
+}
+
+impl ChainType {
+    pub fn syncs_blockchain(&self) -> bool {
+        self.sync_type().bits() & SyncType::NeedsWalletSyncType.bits() != 0
+    }
+
+    pub fn sync_type(&self) -> SyncType {
+        SyncType::Default
+    }
+    pub fn keep_headers(&self) -> bool {
+        false
+    }
+
+    pub fn use_checkpoint_masternode_lists(&self) -> bool {
+        true
+    }
+
+    pub fn smart_outputs(&self) -> bool {
+        true
+    }
+
+    pub fn should_use_checkpoint_file(&self) -> bool {
+        true
+    }
+
+    pub fn sync_governance_objects_interval(&self) -> u64 {
+        600
+    }
+
+    pub fn sync_masternode_list_interval(&self) -> u64 {
+        600
+    }
 }
