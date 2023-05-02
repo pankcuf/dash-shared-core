@@ -11,7 +11,7 @@ authors = ["Vladimir Pirogov <vladimir.pirogov@dash.org>"]
 description = "Dash SPV core"
 documentation = "https://dashcore.readme.io/docs"
 homepage = "https://github.com/dashpay/dash-shared-core"
-license = "CC0-1.0"
+license = "MIT"
 keywords = ["crypto", "dash", "spv"]
 
 [profile.release]

@@ -42,4 +42,4 @@ jobs:
       - name: Build Apple frameworks
         working-directory: ./dash-shared-core/dash-spv-apple-bindings
         run: |
-          ./build_macos_pod.sh && ./build_ios_pod.sh
+          ./build.sh

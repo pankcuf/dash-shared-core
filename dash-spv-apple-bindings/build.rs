@@ -31,5 +31,5 @@ fn main() {
     };
     cbindgen::generate_with_config(&crate_dir, config)
         .unwrap()
-        .write_to_file("target/dash_shared_core.h");
+        .write_to_file("../target/dash_shared_core.h");
 }

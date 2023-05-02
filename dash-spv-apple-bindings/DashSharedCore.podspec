@@ -1,9 +1,9 @@
 Pod::Spec.new do |s|
   s.name             = 'DashSharedCore'
-  s.version          = '0.3.5'
-  s.summary          = 'Dash Core written in Rust'
+  s.version          = '0.3.6'
+  s.summary          = 'Dash Core SPV written in Rust'
   s.author           = 'Dash'
-  s.description      = "Dash Core"
+  s.description      = "C-bindings for Dash Core SPV that can be used in projects for Apple platform"
   s.homepage         = 'https://github.com/dashpay/dash-shared-core'
 
   s.license          = { :type => 'MIT', :file => 'LICENSE' }
@@ -12,13 +12,12 @@ Pod::Spec.new do |s|
   s.ios.deployment_target = '13.0'
   s.macos.deployment_target = '10.15'
 
-  s.source_files = 'DashSharedCore/include/**/*.h'
-
   s.prepare_command = <<-CMD
-    ./build_macos_pod.sh
-    ./build_ios_pod.sh
+    cd dash-spv-apple-bindings
+    ./build.sh
   CMD
 
-  s.ios.vendored_frameworks = 'DashSharedCore/framework/DashSharedCore.xcframework'
-  s.osx.vendored_libraries = 'DashSharedCore/lib/macos/**/*.a'
+  s.source_files = 'dash-spv-apple-bindings/DashSharedCore/include/**/*.h'
+  s.ios.vendored_frameworks = 'dash-spv-apple-bindings/DashSharedCore/framework/DashSharedCore.xcframework'
+  s.osx.vendored_libraries = 'dash-spv-apple-bindings/DashSharedCore/lib/macos/**/*.a'
 end
