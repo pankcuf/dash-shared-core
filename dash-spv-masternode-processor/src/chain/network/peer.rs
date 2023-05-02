@@ -119,9 +119,9 @@ pub struct Peer {
 
     received_orphan_count: u32,
 
-    pong_handlers: Vec<Arc<dyn PongCallback>>,
+    pong_handlers: Vec<Arc<dyn PongCallback<Output=()>>>,
 
-    mempool_transaction_callback: Option<Arc<dyn MempoolTransactionCallback>>,
+    mempool_transaction_callback: Option<Arc<dyn MempoolTransactionCallback<Output=()>>>,
     mempool_request_time: u64,
 
     known_block_hashes: Vec<UInt256>,

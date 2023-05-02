@@ -3,7 +3,6 @@ use std::thread;
 // use std::io::{self, BufRead};
 // use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
-use dash_spv_masternode_processor::chain::Chain;
 // use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
 // use tokio::net::TcpStream;
 use dash_spv_masternode_processor::chain::{Chain, Wallet};
