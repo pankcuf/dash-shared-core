@@ -446,7 +446,7 @@ impl Peer {
         self.mempool_transaction_callback = None;
     }
 
-    pub fn send_mempool_message(&mut self, published_tx_hashes: Vec<UInt256>, completion: Arc<dyn MempoolTransactionCallback>) {
+    pub fn send_mempool_message(&mut self, published_tx_hashes: Vec<UInt256>, completion: Arc<dyn MempoolTransactionCallback<Output=()>>) {
         println!("{} send_mempool_message", self.socket_addr);
         self.known_tx_hashes.extend(published_tx_hashes);
         self.sent_mempool = true;
@@ -505,7 +505,6 @@ impl Peer {
     }
 
     pub fn send_getblocks_message_with_locators(&mut self, locators: Vec<UInt256>, hash_stop:UInt256) {
-        // DSGetBlocksRequest *request = [DSGetBlocksRequest requestWithLocators:locators andHashStop:hashStop protocolVersion:self.chain.protocolVersion];
         let request = Request::GetBlocks(locators, hash_stop, self.chain_type.protocol_version());
         self.sent_getblocks = true;
         self.send_request(request);
@@ -596,7 +595,7 @@ impl Peer {
         self.send_request(Request::Default(MessageType::Getaddr));
     }
 
-    pub fn send_ping_message(&mut self, callback: Arc<dyn PongCallback>) {
+    pub fn send_ping_message(&mut self, callback: Arc<dyn PongCallback<Output=()>>) {
         // TODO: async?
         //dispatch_async(self.delegateQueue, ^{
         self.pong_handlers.push(callback);

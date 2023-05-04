@@ -512,11 +512,9 @@ impl Inner {
                             }
                         }
                         self.peers.extend(peers.iter().flat_map(|p| p.iter().cloned()));
-                        // for p in peers.iter() {
-                        //     self.peers.extend(p.iter().cloned());
-                        // }
                         // if DNS peer discovery fails, fall back on a hard coded list of peers (list taken from satoshi client)
                         if self.peers.len() < PEER_MAX_CONNECTIONS {
+                            println!("DNS peer discovery failed: will use fixed peers");
                             self.peers.extend(self.chain_type
                                 .load_fixed_peer_addresses()
                                 .into_iter()
@@ -538,6 +536,11 @@ impl Inner {
 
     pub fn trusted_peer_host(&self) -> Option<String> {
         UserDefaults::string_for_key(self.chain_type.settings_fixed_peer_key())
+    }
+
+    pub fn setup_fixed_peer(&mut self, chain: Shared<Chain>) {
+        self.fixed_peer = self.trusted_peer_host().and_then(|trusted| Peer::peer_with_host(&trusted, chain));
+        self.max_connect_count = self.fixed_peer.and_then(1).unwrap_or(PEER_MAX_CONNECTIONS);
     }
 
     pub fn set_trusted_peer_host(&self, host: Option<String>) {
@@ -815,7 +818,6 @@ impl PeerManager {
     }
 
     pub fn register_peer_at_location(&self, ip_address: UInt128, port: u16, dapi_jrpc_port: u32, dapi_grpc_port: u32) {
-        let classes = vec!["String".to_string(), "Number".to_string(), "Dictionary".to_string(), "Data".to_string()];
         let mut registered_peer_infos = Keychain::get_array::<PeerInfo>(self.inner.try_read().unwrap().chain_type.registered_peers_key()).unwrap_or(vec![]);
         let insert_info = PeerInfo { address: ip_address, port, dapi_jrpc_port, dapi_grpc_port };
         if !registered_peer_infos.contains(&insert_info) {
@@ -890,8 +892,7 @@ impl PeerManager {
 
             // remove all disconnected peers
             inner.mutable_connected_peers.retain(|peer| peer.status() != PeerStatus::Disconnected);
-            inner.fixed_peer = inner.trusted_peer_host().and_then(|trusted| Peer::peer_with_host(&trusted, shared_chain.clone()));
-            inner.max_connect_count = if inner.fixed_peer.is_some() { 1 } else { PEER_MAX_CONNECTIONS };
+            inner.setup_fixed_peer(shared_chain.clone());
             if inner.connected_peers.len() >= inner.max_connect_count {
                 // already connected to maxConnectCount peers
                 return;
@@ -902,7 +903,7 @@ impl PeerManager {
             } else {
                 peers[..100].to_vec()
             };
-            if peers.len() > 0 && inner.connected_peers.len() < inner.max_connect_count {
+            if inner.connected_peers.len() < inner.max_connect_count {
                 while !peers.is_empty() && inner.connected_peers.len() < inner.max_connect_count {
                     // pick a random peer biased towards peers with more recent timestamps
                     let random_index = ((thread_rng().gen_range(0..peers.len()) as f64).powi(2) / peers.len() as f64) as usize;
@@ -910,7 +911,7 @@ impl PeerManager {
                     if !inner.connected_peers.contains(peer) {
                         // peer.chain_delegate = chain;
                         inner.mutable_connected_peers.push(peer.clone());
-                        println!("Will attempt to connect to peer {}", peer.host());
+                        println!("Will attempt to connect to peer {}", peer.location());
                         peer.connect();
                     }
                     peers.remove(random_index);
@@ -941,7 +942,6 @@ impl PeerManager {
 
             // Notify the main thread that we're done connecting
         }).join().unwrap();
-        //.join().unwrap();
     }
 
     pub fn disconnect(&mut self) {

@@ -24,6 +24,7 @@ pub trait IHaveChainSettings {
             self.isd_llmq_type() == llmq_type
     }
     fn is_evolution_enabled(&self) -> bool;
+    fn name(&self) -> String;
 }
 
 #[repr(C)]
@@ -285,6 +286,13 @@ impl IHaveChainSettings for ChainType {
         false
     }
 
+    fn name(&self) -> String {
+        match self {
+            Self::MainNet => "Mainnet".to_string(),
+            Self::TestNet => "Testnet".to_string(),
+            Self::DevNet(devnet) => devnet.name()
+        }
+    }
 }
 
 impl IHaveChainSettings for DevnetType {
@@ -323,6 +331,10 @@ impl IHaveChainSettings for DevnetType {
 
     fn is_evolution_enabled(&self) -> bool {
         false
+    }
+
+    fn name(&self) -> String {
+        format!("Devnet - {}.{}", self.identifier(), self.version())
     }
 }
 // Params

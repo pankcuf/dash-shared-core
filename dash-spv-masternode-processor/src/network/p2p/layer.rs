@@ -20,7 +20,7 @@
 //!
 
 use futures::{future, Future, FutureExt, TryFutureExt};
-use futures::task::Poll as Async;
+use futures::task::{Poll as Async, Spawn, SpawnExt};
 use futures::task::Waker;
 
 use std::{
@@ -36,11 +36,11 @@ use std::{
 use std::net::SocketAddrV4;
 use futures::future::Either;
 use futures_timer::Delay;
-use mio::{Interest, Poll, Token};
+use mio::{Events, Interest, Poll, Token};
 use mio::event::Event;
 use mio::net::{TcpListener, TcpStream};
 use crate::chain::Chain;
-use crate::chain::common::ChainType;
+use crate::chain::common::{ChainType, IHaveChainSettings};
 use crate::chain::network::message::message::{Message, Payload};
 use crate::chain::network::message::response::Response;
 use crate::chain::network::MessageType;
@@ -211,7 +211,7 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
         });
         let p2p2 = p2p.clone();
         thread::Builder::new()
-            .name("p2pcntrl".to_string())
+            .name(format!("peer_manager_{}", chain_type.name()))
             .spawn(move || p2p2.control_loop(control_receiver))
             .unwrap();
         (p2p, P2PControlSender::new(control_sender, peers, back_pressure))
@@ -312,7 +312,7 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
         let poll = self.poll.clone();
         let waker = self.waker.clone();
         // todo: avoid cloning
-        future::poll_fn(move |_| // {
+        future::poll_fn(move |_|
             match Self::connect(version.clone(), peers.clone(), poll.clone(), pid, source.clone()) {
                 Ok(addr) => Async::Ready(Ok(addr)),
                 Err(e) => Async::Ready(Err(e))
@@ -331,12 +331,17 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
                 }
             );
             let timeout_future = Delay::new(Duration::from_secs(CONNECT_TIMEOUT_SECONDS));
-            future::select(handshake_future, timeout_future).map(|res| match res {
-                Either::Left((status, timeout)) => status,
-                Either::Right(..) => Err(Error::HandshakeTimeout)
-            })
+            future::select(handshake_future, timeout_future)
+                .map(|res| match res {
+                    Either::Left((status, timeout)) => status,
+                    Either::Right(..) => Err(Error::HandshakeTimeout)
+                })
             // future::select_ok(vec![handshake_future, timeout_future]).map_err(|_| Error::HandshakeTimeout)
         })
+    }
+
+    fn has_connected_peers(peers: &Arc<RwLock<PeerMap>>) -> bool {
+        peers.read().unwrap().values().any(|peer| peer.lock().unwrap().stream.peer_addr().map_or(false, |addr| a.ip() == addr.ip()))
     }
 
     // initiate connection to peer
@@ -346,33 +351,26 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
         let stream;
         match source {
             PeerSource::Outgoing(a) => {
-                if peers.read().unwrap().values().any(|peer| peer.lock().unwrap().stream.peer_addr().map_or(false, |addr| a.ip() == addr.ip())) {
-                    println!("rejecting outgoing connect for a peer already connected");
+                if Self::has_connected_peers(&peers) {
                     return Err(Error::Handshake);
                 }
-
                 addr = a;
                 outgoing = true;
-                println!("trying outgoing connect to {} peer={}", addr, pid);
                 stream = TcpStream::connect(addr)?;
             },
             PeerSource::Incoming(listener) => {
                 let (s, a) = listener.accept()?;
-                if peers.read().unwrap().values().any(|peer| peer.lock().unwrap().stream.peer_addr().map_or(false, |addr| a.ip() == addr.ip())) {
-                    println!("rejecting incoming connect from a peer already connected");
+                if Self::has_connected_peers(&peers) {
                     s.shutdown(Shutdown::Both).unwrap_or(());
                     return Err(Error::Handshake);
                 }
                 addr = a;
                 stream = s;
-                println!("trying incoming connect to {} peer={}", addr, pid);
                 outgoing = false;
             }
         };
-        // create lock protected peer object
         let peer = Mutex::new(Peer::new(pid, stream, poll.clone(), outgoing)?);
         let mut peers = peers.write().unwrap();
-        // add to peer map
         peers.insert(pid, peer);
         let stored_peer = peers.get(&pid).unwrap();
         if outgoing {
@@ -381,10 +379,8 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
             stored_peer.lock().unwrap().register_read()?;
         }
         if outgoing {
-            // send this node's version message to peer
             peers.get(&pid).unwrap().lock().unwrap().send(version)?;
         }
-
         Ok(addr)
     }
 
@@ -400,7 +396,6 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
         {
             let mut wakers = self.waker.lock().unwrap();
             if let Some(waker) = wakers.remove(&pid) {
-                println!("waking for disconnect peer={}", pid);
                 waker.wake();
             }
         }
@@ -415,69 +410,46 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
         if let Some(peer) = self.peers.read().unwrap().get(&pid) {
             let mut locked_peer = peer.lock().unwrap();
             locked_peer.ban += increment;
-            println!("ban score {} for peer={}", locked_peer.ban, pid);
             if locked_peer.ban >= BAN {
                 disconnect = true;
             }
         }
         if disconnect {
-            println!("ban peer={}", pid);
             self.disconnect(pid, true);
         }
     }
 
     fn event_processor(&self, event: &Event, pid: PeerId, needed_services: u64, iobuf: &mut [u8]) -> Result<(), Error> {
         if event.is_read_closed() || event.is_error() {
-            println!("left us peer={}", pid);
             self.disconnect(pid, false);
         } else {
             // check for ability to write before read, to get rid of data before buffering more read
             // token should only be registered for write if there is a need to write
             // to avoid superfluous wakeups from poll
             if event.is_writable() {
-                println!("writeable peer={}", pid);
-                // figure peer's entry in the peer map, provided it is still connected, ignore event if not
                 if let Some(peer) = self.peers.read().unwrap().get(&pid) {
-                    // get and lock the peer from the peer map entry
                     let mut locked_peer = peer.lock().unwrap();
                     loop {
                         let mut get_next = true;
-                        // if there is previously unfinished write
-                        if let Ok(len) = locked_peer.write_buffer.read_ahead(iobuf) {
-                            if len > 0 {
-                                println!("try write {} bytes to peer={}", len, pid);
-                                // try writing it out now
-                                let mut wrote = 0;
-                                while let Ok(wlen) = locked_peer.stream.write(&iobuf[wrote..len]) {
-                                    if wlen == 0 {
-                                        println!("would block on peer={}", pid);
-                                        // do not fetch next message until there is an unfinished write
-                                        get_next = false;
-                                        break;
-                                    }
-                                    println!("wrote {} bytes to peer={}", wlen, pid);
-                                    // advance buffer and drop used store
-                                    locked_peer.write_buffer.advance(wlen);
-                                    locked_peer.write_buffer.commit();
-                                    wrote += wlen;
-                                    if wrote == len {
-                                        break;
-                                    }
+                        if let Ok(len @ 1..) = locked_peer.write_buffer.read_ahead(iobuf) {
+                            let mut wrote = 0;
+                            while let Ok(wlen) = locked_peer.stream.write(&iobuf[wrote..len]) {
+                                if wlen == 0 {
+                                    get_next = false;
+                                    break;
+                                }
+                                locked_peer.write_buffer.advance(wlen);
+                                locked_peer.write_buffer.commit();
+                                wrote += wlen;
+                                if wrote == len {
+                                    break;
                                 }
                             }
                         }
                         if get_next {
-                            // get an outgoing message from the channel (if any)
-                            if let Some(msg) = locked_peer.try_receive() {
-                                // serialize the message
-                                let raw = self.state.pack(msg);
-                                println!("next message {:?} to peer={}", raw, pid);
-                                // refill write buffer
-                                self.state.encode(raw, &mut locked_peer.write_buffer)?;
+                            if let Some(message) = locked_peer.try_receive() {
+                                self.state.encode(self.state.pack(message), &mut locked_peer.write_buffer)?;
                             } else {
-                                // no unfinished write and no outgoing message
-                                // keep registered only for read events
-                                println!("done writing to peer={}", pid);
                                 locked_peer.reregister_read()?;
                                 break;
                             }
@@ -485,157 +457,93 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
                     }
                 }
             }
-            // is peer readable ?
             if event.is_readable() {
-                println!("readable peer={}", pid);
-                // collect incoming messages here
-                // incoming messages are collected here for processing after release
-                // of the lock on the peer map.
                 let mut incoming = Vec::new();
-                // disconnect if set
                 let mut disconnect = false;
-                // how to disconnect
                 let mut ban = false;
-                // new handshake if set
                 let mut handshake = false;
-                // peer address
                 let mut address = None;
-                // read lock peer map and retrieve peer
                 if let Some(peer) = self.peers.read().unwrap().get(&pid) {
-                    // lock the peer from the peer
                     let mut locked_peer = peer.lock().unwrap();
-                    // read the peer's socket
-                    if let Ok(len) = locked_peer.stream.read(iobuf) {
-                        println!("received {} bytes from peer={}", len, pid);
-                        if len == 0 {
-                            println!("read zero length message, disconnecting peer={}", pid);
-                            disconnect = true;
-                        }
-                        // accumulate in a buffer
-                        locked_peer.read_buffer.write_all(&iobuf[0..len])?;
-                        // extract messages from the buffer
-                        while let Some(msg) = self.state.decode(&mut locked_peer.read_buffer)? {
-                            println!("received {:?} peer={}", msg.r#type, pid);
-                            if locked_peer.connected {
-                                // regular processing after handshake
-                                incoming.push(msg);
-                            } else {
-                                // have to get both version and verack to complete handhsake
-                                if !(locked_peer.version.is_some() && locked_peer.flags.contains(PeerStateFlags::GOT_VERACK)) {
-                                    // before handshake complete
-                                    if let Ok(response) = self.state.unpack(msg) {
-                                        if let Response::Version(version) = response {
-                                            if locked_peer.version.is_some() {
-                                                // repeated version
-                                                disconnect = true;
-                                                ban = true;
-                                                println!("misbehaving peer, repeated version peer={}", pid);
-                                                break;
-                                            }
-                                            if version.nonce == self.state.nonce() {
-                                                // connect to myself
-                                                disconnect = true;
-                                                ban = true;
-                                                println!("rejecting to connect to myself peer={}", pid);
-                                                break;
-                                            } else {
-                                                if version.version < self.state.chain_type().min_protocol_version() || (needed_services & version.services) != needed_services {
-                                                    println!("rejecting peer of version {} and services {:b} peer={}", version.version, version.services, pid);
-                                                    disconnect = true;
-                                                    break;
-                                                } else {
-                                                    if !locked_peer.outgoing {
-                                                        // send own version message to incoming peer
-                                                        let addr = locked_peer.stream.peer_addr()?;
-                                                        println!("send version to incoming connection {}", addr);
-                                                        // do not show higher version than the peer speaks
-                                                        let version = self.state.version(addr, version.version);
-                                                        locked_peer.send(version)?;
+                    match locked_peer.stream.read(iobuf) {
+                        Ok(len) => {
+                            if len == 0 {
+                                disconnect = true;
+                            }
+                            locked_peer.read_buffer.write_all(&iobuf[0..len])?;
+                            while let Some(msg) = self.state.decode(&mut locked_peer.read_buffer)? {
+                                if locked_peer.connected {
+                                    incoming.push(msg);
+                                } else if locked_peer.version.is_none() || !locked_peer.flags.contains(PeerStateFlags::GOT_VERACK) {
+                                    match self.state.unpack(msg) {
+                                        Ok(response) => {
+                                            match response {
+                                                Response::Version(version) => if locked_peer.version.is_none() && version.nonce != self.state.nonce() {
+                                                    if version.version < self.state.chain_type().min_protocol_version() ||
+                                                        (needed_services & version.services) != needed_services ||
+                                                        locked_peer.outgoing && version.last_block_height < self.state.get_height() {
+                                                        disconnect = true;
+                                                        break;
                                                     } else {
-                                                        // outgoing connects should not be behind this
-                                                        if version.last_block_height < self.state.get_height() {
-                                                            println!("rejecting to connect with height {} peer={}", version.last_block_height, pid);
-                                                            disconnect = true;
-                                                            break;
+                                                        if !locked_peer.outgoing {
+                                                            locked_peer.send(self.state.version(locked_peer.stream.peer_addr()?, version.version))?;
                                                         }
+                                                        locked_peer.send(self.state.verack())?;
+                                                        locked_peer.version = Some(VersionCarrier {
+                                                            version: min(version.version, self.state.chain_type().protocol_version()),
+                                                            services: version.services,
+                                                            timestamp: SystemTime::seconds_since_1970(),
+                                                            receiver_address: SocketAddr::V4(SocketAddrV4::new(version.addr_recv_address.to_ipv4_addr(), version.addr_recv_port)),
+                                                            sender_address: SocketAddr::V4(SocketAddrV4::new(version.addr_trans_address.to_ipv4_addr(), version.addr_trans_port)),
+                                                            nonce: version.nonce,
+                                                            user_agent: self.chain_type.user_agent(),
+                                                            start_height: 0 /*v.start_height as u32*/,
+                                                            relay: false /*v.relay*/
+                                                        });
                                                     }
-                                                    println!("accepting peer of version {} and services {:b} peer={}", version.version, version.services, pid);
-                                                    // acknowledge version message received
-                                                    locked_peer.send(self.state.verack())?;
-                                                    // all right, remember this peer
-                                                    println!("client {} height: {} peer={}", version.useragent, version.last_block_height, pid);
-                                                    // reduce protocol version to our capabilities
-                                                    let vm = VersionCarrier {
-                                                        version: min(version.version, self.state.chain_type().protocol_version()),
-                                                        services: version.services,
-                                                        timestamp: SystemTime::seconds_since_1970(),
-                                                        receiver_address: SocketAddr::V4(SocketAddrV4::new(version.addr_recv_address.to_ipv4_addr(), version.addr_recv_port)),
-                                                        sender_address: SocketAddr::V4(SocketAddrV4::new(version.addr_trans_address.to_ipv4_addr(), version.addr_trans_port)),
-                                                        nonce: version.nonce,
-                                                        user_agent: self.chain_type.user_agent(),
-                                                        start_height: 0 /*v.start_height as u32*/,
-                                                        relay: false /*v.relay*/
-                                                    };
-
-                                                    locked_peer.version = Some(vm);
+                                                },
+                                                Response::Verack => if !locked_peer.flags.contains(PeerStateFlags::GOT_VERACK) {
+                                                    locked_peer.flags |= PeerStateFlags::GOT_VERACK;
+                                                },
+                                                _ => {
+                                                    disconnect = true;
+                                                    ban = true;
+                                                    break;
                                                 }
                                             }
-                                        } else if response.r#type() == MessageType::Verack {
-                                            if locked_peer.flags.contains(PeerStateFlags::GOT_VERACK) {
-                                                // repeated verack
-                                                disconnect = true;
-                                                ban = true;
-                                                println!("misbehaving peer, repeated version peer={}", pid);
-                                                break;
+                                            if locked_peer.version.is_some() && locked_peer.flags.contains(PeerStateFlags::GOT_VERACK) {
+                                                locked_peer.connected = true;
+                                                handshake = true;
+                                                address = locked_peer.stream.peer_addr().ok()
                                             }
-                                            println!("got verack peer={}", pid);
-                                            locked_peer.flags |= PeerStateFlags::GOT_VERACK;
-                                        } else {
-                                            println!("misbehaving peer unexpected message before handshake peer={}", pid);
-                                            // some other message before handshake
+                                        },
+                                        Err(_) => {
                                             disconnect = true;
                                             ban = true;
                                             break;
                                         }
-                                        if locked_peer.version.is_some() && locked_peer.flags.contains(PeerStateFlags::GOT_VERACK) {
-                                            locked_peer.connected = true;
-                                            handshake = true;
-                                            address = locked_peer.stream.peer_addr().ok()
-                                        }
-                                    } else {
-                                        println!("Ban for malformed message peer={}", pid);
-                                        disconnect = true;
-                                        ban = true;
-                                        break;
                                     }
                                 }
                             }
+                        },
+                        Err(_) => {
+                            disconnect = true;
                         }
-                    } else {
-                        println!("IO error reading peer={}", pid);
-                        disconnect = true;
                     }
                 }
                 if disconnect {
-                    println!("disconnecting peer={}", pid);
                     self.disconnect(pid, ban);
                 } else {
                     if handshake {
-                        println!("handshake peer={}", pid);
                         self.connected(pid, address);
                         if let Some(w) = self.waker.lock().unwrap().remove(&pid) {
-                            println!("waking for handshake");
                             w.wake();
                         }
                     }
-                    // process queued incoming messages outside lock
-                    // as process could call back to P2P
                     for msg in incoming {
-                        println!("processing {:?} for peer={}", msg.r#type, pid);
                         if let Ok(m) = self.state.unpack(msg) {
                             self.dispatcher.send(PeerNotification::Incoming(pid, m));
                         } else {
-                            println!("Ban for malformed message peer={}", pid);
                             self.disconnect(pid, true);
                         }
                     }
@@ -645,39 +553,30 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
         Ok(())
     }
 
-    // /// run the message dispatcher loop
-    // /// this method does not return unless there is an error obtaining network events
-    // /// run in its own thread, which will process all network events
-    // pub fn poll_events(&mut self, needed_services: u64, spawn: &mut dyn Spawn) {
-    //     // events buffer
-    //     let mut events = Events::with_capacity(EVENT_BUFFER_SIZE);
-    //     // IO buffer
-    //     let mut iobuf = vec!(0u8; IO_BUFFER_SIZE);
-    //
-    //     loop {
-    //         // get the next batch of events
-    //         self.poll.poll(&mut events, None)
-    //             .expect("can not poll mio events");
-    //
-    //         // iterate over events
-    //         for event in events.iter() {
-    //             // check for listener
-    //             if let Some(server) = self.is_listener(event.token()) {
-    //                 println!("incoming connection request");
-    //                 spawn.spawn(self.add_peer(PeerSource::Incoming(server)).map(|_| ())).expect("can not add peer for incoming connection");
-    //             } else {
-    //                 // construct the id of the peer the event concerns
-    //                 let pid = PeerId::new(network, event.token());
-    //                 if let Err(error) = self.event_processor(event, pid, needed_services, iobuf.as_mut_slice()) {
-    //                     use std::error::Error;
-    //
-    //                     println!("error {:?} peer={}", error.source(), pid);
-    //                     self.ban(pid, 10);
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
+    /// run the message dispatcher loop
+    /// this method does not return unless there is an error obtaining network events
+    /// run in its own thread, which will process all network events
+    pub fn poll_events(&mut self, needed_services: u64, spawn: &mut dyn Spawn) {
+        // events buffer
+        let mut events = Events::with_capacity(EVENT_BUFFER_SIZE);
+        // IO buffer
+        let mut iobuf = vec![0u8; IO_BUFFER_SIZE];
+
+        loop {
+            self.poll.poll(&mut events, None).expect("can not poll mio events");
+            for event in events.iter() {
+                if let Some(server) = self.is_listener(event.token()) {
+                    spawn.spawn(self.add_peer(PeerSource::Incoming(server)).map(|_| ())).expect("can not add peer for incoming connection");
+                } else {
+                    let pid = PeerId::new(network, event.token());
+                    if let Err(error) = self.event_processor(event, pid, needed_services, iobuf.as_mut_slice()) {
+                        use std::error::Error;
+                        self.ban(pid, 10);
+                    }
+                }
+            }
+        }
+    }
 
     fn is_listener(&self, token: Token) -> Option<Arc<TcpListener>> {
         if let Some(server) = self.listener.lock().unwrap().get(&token) {

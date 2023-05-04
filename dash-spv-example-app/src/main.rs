@@ -20,7 +20,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Chain -> start sync");
     testnet.start_sync();
     println!("Chain -> start sync .... sleep 10 sec");
-    thread::sleep(Duration::from_secs(10));
+    thread::sleep(Duration::from_secs(20));
     println!("Chain -> stop sync");
     testnet.stop_sync();
     println!("Chain -> stop sync .... exit");
