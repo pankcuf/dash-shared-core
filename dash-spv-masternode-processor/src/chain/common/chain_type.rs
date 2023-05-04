@@ -127,17 +127,17 @@ impl From<DevnetType> for i16 {
 impl From<&str> for DevnetType {
     fn from(value: &str) -> Self {
         match value {
-            "jack-daniels" => DevnetType::JackDaniels,
-            "333" => DevnetType::Devnet333,
-            "chacha" => DevnetType::Chacha,
-            "mojito" => DevnetType::Mojito,
-            "white-russian" => DevnetType::WhiteRussian,
+            "devnet-jack-daniels" => DevnetType::JackDaniels,
+            "devnet-333" => DevnetType::Devnet333,
+            "devnet-chacha" => DevnetType::Chacha,
+            "devnet-mojito" => DevnetType::Mojito,
+            "devnet-white-russian" => DevnetType::WhiteRussian,
             "miningTest" => DevnetType::MiningTest,
             "devnet-mobile-2" => DevnetType::Mobile2,
             "0" => DevnetType::Zero,
-            "screwdriver" => DevnetType::Screwdriver,
-            "absinthe" => DevnetType::Absinthe,
-            "bintang" => DevnetType::Bintang,
+            "devnet-screwdriver" => DevnetType::Screwdriver,
+            "devnet-absinthe" => DevnetType::Absinthe,
+            "devnet-bintang" => DevnetType::Bintang,
             _ => panic!("Devnet with name: {} not supported", value)
         }
     }
@@ -147,17 +147,17 @@ impl From<&str> for DevnetType {
 impl DevnetType {
     pub fn identifier(&self) -> String {
         match self {
-            DevnetType::JackDaniels => "jack-daniels",
-            DevnetType::Devnet333 => "333",
-            DevnetType::Chacha => "chacha",
-            DevnetType::Mojito => "mojito",
-            DevnetType::WhiteRussian => "white-russian",
+            DevnetType::JackDaniels => "devnet-jack-daniels",
+            DevnetType::Devnet333 => "devnet-333",
+            DevnetType::Chacha => "devnet-chacha",
+            DevnetType::Mojito => "devnet-mojito",
+            DevnetType::WhiteRussian => "devnet-white-russian",
             DevnetType::MiningTest => "miningTest",
             DevnetType::Mobile2 => "devnet-mobile-2",
             DevnetType::Zero => "0",
-            DevnetType::Screwdriver => "screwdriver",
-            DevnetType::Absinthe => "absinthe",
-            DevnetType::Bintang => "bintang",
+            DevnetType::Screwdriver => "devnet-screwdriver",
+            DevnetType::Absinthe => "devnet-absinthe",
+            DevnetType::Bintang => "devnet-bintang",
         }.to_string()
     }
 
@@ -434,7 +434,7 @@ impl ChainType {
                     DevnetType::Chacha => "cPTms6Sd7QuhPWXWQSzMbvg2VbEPsWCsLBbR4PBgvfYRzAPazbt3",
                     DevnetType::Devnet333 => "cQnP9JNQp6oaZrvBtqBWRMeQERMkDyuXyvQh1qaph4FdP6cT2cVa",
                     DevnetType::JackDaniels => "cTeGz53m7kHgA9L75s4vqFGR89FjYz4D9o44eHfoKjJr2ArbEtwg",
-                    DevnetType::Screwdriver => "cSFv3jPKnyMnk14BL6EXEBy5sWsUDJz3MTsSaTUXGxYd3ioezvmH",
+                    DevnetType::Screwdriver => "cUu1oagVnd2bBGC7EqyijjtFapiLb9yvmaWF4dMaREg6pmXJksHH",
                     DevnetType::Absinthe => "cSAqscqXqRSh9CuGDmdWjKjtVbdiPgCquVTRUFV8Atakx941edN7",
                     DevnetType::Bintang => "cSxYF3ndj46sMG6RKZMy9sBXG2qsXo9NQ6Ess1Jo3MzRRoX5EAEj",
                     _ => ""
@@ -443,7 +443,7 @@ impl ChainType {
                     DevnetType::Chacha => "ybiRzdGWFeijAgR7a8TJafeNi6Yk6h68ps",
                     DevnetType::Devnet333 => "yM6zJAMWoouAZxPvqGDbuHb6BJaD6k4raQ",
                     DevnetType::JackDaniels => "yYBanbwp2Pp2kYWqDkjvckY3MosuZzkKp7",
-                    DevnetType::Screwdriver => "yg6R3jm3j3aaaP9sCz7v95vrtPEKhyinYV",
+                    DevnetType::Screwdriver => "yibwxyuuKsP6kBsq74vu9p6ju97qEb2B4b",
                     DevnetType::Absinthe => "yQaxrDEMJ7t2d4eDTugn3FY87T78j3fJX3",
                     DevnetType::Bintang => "yZLSzMpkSk9aAYujdiMauQi4MYjQQwFgGQ",
                     _ => "",
