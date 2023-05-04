@@ -173,34 +173,25 @@ pub struct VersionCarrier {
 
 /// The P2P network layer
 pub struct P2P<STATE: PeerState + Send + Sync + 'static> {
-    // sender to the dispatcher of incoming messages
     dispatcher: PeerNotificationDispatcher,
-    // network specific conf
     pub state: STATE,
     pub chain_type: ChainType,
     pub chain: Shared<Chain>,
-    // The collection of connected peers
     peers: Arc<RwLock<PeerMap>>,
-    // The poll object of the async IO layer (mio)
-    // access to this is shared by P2P and Peer
     poll: Arc<Poll>,
-    // next peer id
-    // atomic only for interior mutability
     next_peer_id: AtomicUsize,
-    // waker
     waker: Arc<Mutex<HashMap<PeerId, Waker>>>,
-    // server
     listener: Arc<Mutex<HashMap<Token, Arc<TcpListener>>>>,
 }
 
 impl<STATE: PeerState + Send + Sync> P2P<STATE> {
     /// create a new P2P network controller
-    pub fn new(config: STATE, dispatcher: PeerNotificationDispatcher, back_pressure: usize, chain_type: ChainType, chain: Shared<Chain>) -> (Arc<P2P<STATE>>, P2PControlSender) {
+    pub fn new(state: STATE, dispatcher: PeerNotificationDispatcher, back_pressure: usize, chain_type: ChainType, chain: Shared<Chain>) -> (Arc<P2P<STATE>>, P2PControlSender) {
         let (control_sender, control_receiver) = mpsc::channel();
         let peers = Arc::new(RwLock::new(PeerMap::new()));
         let p2p = Arc::new(P2P {
             dispatcher,
-            state: config,
+            state,
             chain_type,
             chain,
             peers: peers.clone(),
@@ -486,7 +477,10 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
                                                         break;
                                                     } else {
                                                         if !locked_peer.outgoing {
-                                                            locked_peer.send(self.state.version(locked_peer.stream.peer_addr()?, version.version))?;
+                                                            let remote = locked_peer.stream.peer_addr()?;
+                                                            let max_protocol_version = version.version;
+                                                            let msg = self.state.version(remote, max_protocol_version);
+                                                            locked_peer.send(msg)?;
                                                         }
                                                         locked_peer.send(self.state.verack())?;
                                                         locked_peer.version = Some(VersionCarrier {
