@@ -1,6 +1,7 @@
 use std::cmp::min;
 use std::collections::BTreeMap;
 use crate::chain::common::LLMQType;
+use crate::common::MasternodeType;
 use crate::consensus::Encodable;
 use crate::crypto::{byte_util::{Reversable, Zeroable}, UInt256};
 use crate::models::{LLMQEntry, MasternodeEntry};
@@ -135,16 +136,13 @@ impl MasternodeList {
         modifier: UInt256,
         block_height: u32,
     ) -> Option<UInt256> {
-        // println!("masternode_score: {}:{}:{:?}:{}:{:?}:{:?}", entry.provider_registration_transaction_hash, block_height, entry.known_confirmed_at_height, entry.is_valid_at(block_height), entry.confirmed_hash, entry.confirmed_hash_at(block_height));
         if !entry.is_valid_at(block_height) ||
             entry.confirmed_hash.is_zero() ||
             entry.confirmed_hash_at(block_height).is_none() {
             return None;
         }
         let mut buffer: Vec<u8> = Vec::new();
-        if let Some(hash) =
-            entry.confirmed_hash_hashed_with_pro_reg_tx_hash_at(block_height)
-        {
+        if let Some(hash) = entry.confirmed_hash_hashed_with_pro_reg_tx_hash_at(block_height) {
             hash.enc(&mut buffer);
         }
         modifier.enc(&mut buffer);
@@ -209,18 +207,25 @@ impl MasternodeList {
         masternodes: BTreeMap<UInt256, MasternodeEntry>,
         quorum_modifier: UInt256,
         block_height: u32,
+        hpmn_only: bool,
     ) -> BTreeMap<UInt256, MasternodeEntry> {
         masternodes
             .into_iter()
-            .filter_map(|(_, entry)| Self::masternode_score(&entry, quorum_modifier, block_height)
-                .map(|score| (score, entry)))
+            .filter_map(|(_, entry)|
+                if !hpmn_only || entry.mn_type == MasternodeType::HighPerformance {
+                    Self::masternode_score(&entry, quorum_modifier, block_height)
+                        .map(|score| (score, entry))
+                } else {
+                    None
+                }
+            )
             .collect()
     }
 
-    pub fn get_masternodes_for_quorum(llmq_type: LLMQType, masternodes: BTreeMap<UInt256, MasternodeEntry>, quorum_modifier: UInt256, block_height: u32) -> Vec<MasternodeEntry> {
+    pub fn get_masternodes_for_quorum(llmq_type: LLMQType, masternodes: BTreeMap<UInt256, MasternodeEntry>, quorum_modifier: UInt256, block_height: u32, hpmn_only: bool) -> Vec<MasternodeEntry> {
         let quorum_count = llmq_type.size();
         let masternodes_in_list_count = masternodes.len();
-        let mut score_dictionary = Self::score_masternodes_map(masternodes, quorum_modifier, block_height);
+        let mut score_dictionary = Self::score_masternodes_map(masternodes, quorum_modifier, block_height, hpmn_only);
         let mut scores: Vec<UInt256> = score_dictionary.clone().into_keys().collect();
         scores.sort_by(|&s1, &s2| s2.reversed().cmp(&s1.reversed()));
         let mut valid_masternodes: Vec<MasternodeEntry> = Vec::new();

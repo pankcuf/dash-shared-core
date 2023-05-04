@@ -17,7 +17,12 @@ pub trait IHaveChainSettings {
     fn isd_llmq_type(&self) -> LLMQType;
     fn chain_locks_type(&self) -> LLMQType;
     fn platform_type(&self) -> LLMQType;
-    fn should_process_llmq_of_type(&self, llmq_type: LLMQType) -> bool;
+    fn should_process_llmq_of_type(&self, llmq_type: LLMQType) -> bool {
+        self.chain_locks_type() == llmq_type ||
+            self.is_llmq_type() == llmq_type ||
+            self.platform_type() == llmq_type ||
+            self.isd_llmq_type() == llmq_type
+    }
     fn is_evolution_enabled(&self) -> bool;
     fn name(&self) -> String;
 }
@@ -62,6 +67,9 @@ pub enum DevnetType {
     MiningTest = 5,
     Mobile2 = 6,
     Zero = 7,
+    Screwdriver = 8,
+    Absinthe = 9,
+    Bintang = 10,
 }
 
 impl From<DevnetType> for ChainType {
@@ -90,6 +98,9 @@ impl From<i16> for DevnetType {
             5 => DevnetType::MiningTest,
             6 => DevnetType::Mobile2,
             7 => DevnetType::Zero,
+            8 => DevnetType::Screwdriver,
+            9 => DevnetType::Absinthe,
+            10 => DevnetType::Bintang,
             _ => DevnetType::JackDaniels,
         }
     }
@@ -106,6 +117,9 @@ impl From<DevnetType> for i16 {
             DevnetType::MiningTest => 5,
             DevnetType::Mobile2 => 6,
             DevnetType::Zero => 7,
+            DevnetType::Screwdriver => 8,
+            DevnetType::Absinthe => 9,
+            DevnetType::Bintang => 10,
         }
     }
 }
@@ -121,6 +135,9 @@ impl From<&str> for DevnetType {
             "miningTest" => DevnetType::MiningTest,
             "devnet-mobile-2" => DevnetType::Mobile2,
             "0" => DevnetType::Zero,
+            "screwdriver" => DevnetType::Screwdriver,
+            "absinthe" => DevnetType::Absinthe,
+            "bintang" => DevnetType::Bintang,
             _ => panic!("Devnet with name: {} not supported", value)
         }
     }
@@ -130,15 +147,18 @@ impl From<&str> for DevnetType {
 impl DevnetType {
     pub fn identifier(&self) -> String {
         match self {
-            DevnetType::JackDaniels => "jack-daniels".to_string(),
-            DevnetType::Devnet333 => "333".to_string(),
-            DevnetType::Chacha => "chacha".to_string(),
-            DevnetType::Mojito => "mojito".to_string(),
-            DevnetType::WhiteRussian => "white-russian".to_string(),
-            DevnetType::MiningTest => "miningTest".to_string(),
-            DevnetType::Mobile2 => "devnet-mobile-2".to_string(),
-            DevnetType::Zero => "0".to_string(),
-        }
+            DevnetType::JackDaniels => "jack-daniels",
+            DevnetType::Devnet333 => "333",
+            DevnetType::Chacha => "chacha",
+            DevnetType::Mojito => "mojito",
+            DevnetType::WhiteRussian => "white-russian",
+            DevnetType::MiningTest => "miningTest",
+            DevnetType::Mobile2 => "devnet-mobile-2",
+            DevnetType::Zero => "0",
+            DevnetType::Screwdriver => "screwdriver",
+            DevnetType::Absinthe => "absinthe",
+            DevnetType::Bintang => "bintang",
+        }.to_string()
     }
 
     pub fn version(&self) -> u16 {
@@ -260,14 +280,6 @@ impl IHaveChainSettings for ChainType {
             ChainType::TestNet => LLMQType::Llmqtype25_67,
             ChainType::DevNet(devnet_type) => devnet_type.platform_type(),
         }
-
-    }
-
-    fn should_process_llmq_of_type(&self, llmq_type: LLMQType) -> bool {
-        self.chain_locks_type() == llmq_type ||
-            self.is_llmq_type() == llmq_type ||
-            self.platform_type() == llmq_type ||
-            self.isd_llmq_type() == llmq_type
     }
 
     fn is_evolution_enabled(&self) -> bool {
@@ -315,13 +327,6 @@ impl IHaveChainSettings for DevnetType {
         LLMQType::LlmqtypeTestnetPlatform
     }
 
-    fn should_process_llmq_of_type(&self, llmq_type: LLMQType) -> bool {
-        self.chain_locks_type() == llmq_type ||
-            self.is_llmq_type() == llmq_type ||
-            self.platform_type() == llmq_type ||
-            self.isd_llmq_type() == llmq_type
-    }
-
     fn is_evolution_enabled(&self) -> bool {
         false
     }
@@ -345,11 +350,11 @@ impl ChainType {
     }
 
     pub fn max_proof_of_work(&self) -> UInt256 {
-        if self.is_devnet_any() {
-            UInt256::from_hex("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff").unwrap()
+        UInt256::from_hex(if self.is_devnet_any() {
+            "7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
         } else {
-            UInt256::from_hex("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff").unwrap()
-        }.reverse()
+            "00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        }).unwrap().reverse()
     }
 
     pub fn max_proof_of_work_target(&self) -> u32 {
@@ -370,6 +375,10 @@ impl ChainType {
             ChainType::TestNet => 70227,
             ChainType::DevNet(_) => 70227
         }
+    }
+
+    pub fn use_legacy_bls(&self) -> bool {
+        self.protocol_version() >= 70225
     }
 
     pub fn standard_port(&self) -> u16 {
@@ -421,24 +430,26 @@ impl ChainType {
             },
             ChainType::DevNet(devnet) => SporkParams {
                 public_key_hex_string: None,
-                private_key_base58_string: match devnet {
-                    DevnetType::Chacha => Some("cPTms6Sd7QuhPWXWQSzMbvg2VbEPsWCsLBbR4PBgvfYRzAPazbt3".to_string()),
-                    DevnetType::Devnet333 => Some("cQnP9JNQp6oaZrvBtqBWRMeQERMkDyuXyvQh1qaph4FdP6cT2cVa".to_string()),
-                    DevnetType::JackDaniels => Some("cTeGz53m7kHgA9L75s4vqFGR89FjYz4D9o44eHfoKjJr2ArbEtwg".to_string()),
-                    _ => Some("".to_string())
-                },
+                private_key_base58_string: Some(match devnet {
+                    DevnetType::Chacha => "cPTms6Sd7QuhPWXWQSzMbvg2VbEPsWCsLBbR4PBgvfYRzAPazbt3",
+                    DevnetType::Devnet333 => "cQnP9JNQp6oaZrvBtqBWRMeQERMkDyuXyvQh1qaph4FdP6cT2cVa",
+                    DevnetType::JackDaniels => "cTeGz53m7kHgA9L75s4vqFGR89FjYz4D9o44eHfoKjJr2ArbEtwg",
+                    DevnetType::Screwdriver => "cSFv3jPKnyMnk14BL6EXEBy5sWsUDJz3MTsSaTUXGxYd3ioezvmH",
+                    DevnetType::Absinthe => "cSAqscqXqRSh9CuGDmdWjKjtVbdiPgCquVTRUFV8Atakx941edN7",
+                    DevnetType::Bintang => "cSxYF3ndj46sMG6RKZMy9sBXG2qsXo9NQ6Ess1Jo3MzRRoX5EAEj",
+                    _ => ""
+                }.to_string()),
                 address: match devnet {
-                    DevnetType::Chacha => "ybiRzdGWFeijAgR7a8TJafeNi6Yk6h68ps".to_string(),
-                    DevnetType::Devnet333 => "yM6zJAMWoouAZxPvqGDbuHb6BJaD6k4raQ".to_string(),
-                    DevnetType::JackDaniels => "yYBanbwp2Pp2kYWqDkjvckY3MosuZzkKp7".to_string(),
-                    _ => "".to_string(),
-                }
+                    DevnetType::Chacha => "ybiRzdGWFeijAgR7a8TJafeNi6Yk6h68ps",
+                    DevnetType::Devnet333 => "yM6zJAMWoouAZxPvqGDbuHb6BJaD6k4raQ",
+                    DevnetType::JackDaniels => "yYBanbwp2Pp2kYWqDkjvckY3MosuZzkKp7",
+                    DevnetType::Screwdriver => "yg6R3jm3j3aaaP9sCz7v95vrtPEKhyinYV",
+                    DevnetType::Absinthe => "yQaxrDEMJ7t2d4eDTugn3FY87T78j3fJX3",
+                    DevnetType::Bintang => "yZLSzMpkSk9aAYujdiMauQi4MYjQQwFgGQ",
+                    _ => "",
+                }.to_string()
             }
         }
-    }
-
-    pub fn use_legacy_bls(&self) -> bool {
-        !self.is_mainnet()
     }
 
     pub fn peer_misbehaving_threshold(&self) -> usize {

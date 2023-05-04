@@ -540,7 +540,7 @@ impl Inner {
 
     pub fn setup_fixed_peer(&mut self, chain: Shared<Chain>) {
         self.fixed_peer = self.trusted_peer_host().and_then(|trusted| Peer::peer_with_host(&trusted, chain));
-        self.max_connect_count = self.fixed_peer.and_then(1).unwrap_or(PEER_MAX_CONNECTIONS);
+        self.max_connect_count = self.fixed_peer.as_ref().map_or(PEER_MAX_CONNECTIONS, |_| 1);
     }
 
     pub fn set_trusted_peer_host(&self, host: Option<String>) {

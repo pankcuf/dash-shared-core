@@ -188,17 +188,17 @@ pub unsafe extern "C" fn processor_cache_masternode_list(block_hash: *const u8, 
     (&mut *cache).mn_lists.insert(hash, list);
 }
 
-// - (BOOL)validateWithMasternodeList:(DSMasternodeList *)masternodeList blockHeightLookup:(BlockHeightFinder)blockHeightLookup;
 /// # Safety
 #[no_mangle]
-pub unsafe extern "C" fn validate_masternode_list(list: *const types::MasternodeList, quorum: *const types::LLMQEntry, block_height: u32) -> bool {
+pub unsafe extern "C" fn validate_masternode_list(list: *const types::MasternodeList, quorum: *const types::LLMQEntry, block_height: u32, chain_type: ChainType) -> bool {
     let list = (*list).decode();
     let mut quorum = (*quorum).decode();
     let is_valid_payload = quorum.validate_payload();
     if !is_valid_payload {
         return false;
     }
-    let valid_masternodes = models::MasternodeList::get_masternodes_for_quorum(quorum.llmq_type, list.masternodes, quorum.llmq_quorum_hash(), block_height);
+    let hpmn_only = quorum.llmq_type == chain_type.platform_type() && !quorum.version.use_bls_legacy();
+    let valid_masternodes = models::MasternodeList::get_masternodes_for_quorum(quorum.llmq_type, list.masternodes, quorum.llmq_quorum_hash(), block_height, hpmn_only);
     return quorum.validate(valid_masternodes, block_height);
 }
 

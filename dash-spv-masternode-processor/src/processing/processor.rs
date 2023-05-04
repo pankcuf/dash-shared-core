@@ -332,9 +332,6 @@ impl MasternodeProcessor {
             for (&llmq_type, llmqs_of_type) in &mut added_quorums {
                 if self.should_process_quorum(llmq_type, is_dip_0024, is_rotated_quorums_presented) {
                     for (&llmq_block_hash, quorum) in llmqs_of_type {
-                        // if llmq_type == LLMQType::Llmqtype60_75 {
-                        //     println!("//////////// validate_quorum -> {:?}: {}: {}", llmq_type, self.lookup_block_height_by_hash(llmq_block_hash), llmq_block_hash.reversed());
-                        // }
                         if let Some(models::MasternodeList { masternodes, .. }) = self.find_masternode_list(llmq_block_hash, &cache.mn_lists, &mut cache.needed_masternode_lists) {
                             let valid = self.validate_quorum(quorum, skip_removed_masternodes, llmq_block_hash, masternodes, cache);
                             // TMP Testnet Platform LLMQ fail verification
@@ -392,7 +389,9 @@ impl MasternodeProcessor {
                 quorum.llmq_type,
                 masternodes,
                 quorum.llmq_quorum_hash(),
-                block_height)
+                block_height,
+                quorum.llmq_type == self.chain_type.platform_type() && !quorum.version.use_bls_legacy()
+            )
         };
 
         // info!("••• validate_quorum ({}: {:?}: {:?}) •••", block_height, quorum, valid_masternodes);
@@ -482,7 +481,7 @@ impl MasternodeProcessor {
                         let quorum_modifier = models::LLMQEntry::build_llmq_quorum_hash(llmq_type, work_block_hash);
                         // println!("quorum_modifier: {}", quorum_modifier);
                         // println!("snapshot: {:?}", snapshot);
-                        let scored_masternodes = models::MasternodeList::score_masternodes_map(masternode_list.masternodes, quorum_modifier, work_block_height);
+                        let scored_masternodes = models::MasternodeList::score_masternodes_map(masternode_list.masternodes, quorum_modifier, work_block_height, false);
                         // java::generate_masternode_list_from_map(&scored_masternodes);
                         let sorted_scored_masternodes = Self::sort_scored_masternodes(scored_masternodes);
                         // println!("//////////////////sorted_scored_masternodes////////////////////");

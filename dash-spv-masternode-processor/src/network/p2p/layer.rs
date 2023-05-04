@@ -23,16 +23,7 @@ use futures::{future, Future, FutureExt, TryFutureExt};
 use futures::task::{Poll as Async, Spawn, SpawnExt};
 use futures::task::Waker;
 
-use std::{
-    cmp::min,
-    collections::HashMap,
-    io,
-    io::{Read, Write},
-    net::{Shutdown, SocketAddr},
-    sync::{Arc, atomic::{AtomicUsize, Ordering}, mpsc, Mutex, RwLock},
-    thread,
-    time::{Duration, SystemTime}
-};
+use std::{cmp::min, collections::HashMap, io, io::{Read, Write}, net::{Shutdown, SocketAddr}, sync::{Arc, atomic::{AtomicUsize, Ordering}, mpsc, Mutex, RwLock}, thread, time::{Duration, SystemTime}};
 use std::net::SocketAddrV4;
 use futures::future::Either;
 use futures_timer::Delay;
@@ -41,9 +32,8 @@ use mio::event::Event;
 use mio::net::{TcpListener, TcpStream};
 use crate::chain::Chain;
 use crate::chain::common::{ChainType, IHaveChainSettings};
-use crate::chain::network::message::message::{Message, Payload};
+use crate::chain::network::message::message::Message;
 use crate::chain::network::message::response::Response;
-use crate::chain::network::MessageType;
 use crate::manager::peer_manager::Error;
 use crate::network::p2p::peer::{Peer, PeerId, PeerMap};
 use crate::network::p2p::state::PeerState;
@@ -340,10 +330,6 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
         })
     }
 
-    fn has_connected_peers(peers: &Arc<RwLock<PeerMap>>) -> bool {
-        peers.read().unwrap().values().any(|peer| peer.lock().unwrap().stream.peer_addr().map_or(false, |addr| a.ip() == addr.ip()))
-    }
-
     // initiate connection to peer
     fn connect(version: Message, peers: Arc<RwLock<PeerMap>>, poll: Arc<Poll>, pid: PeerId, source: PeerSource) -> Result<SocketAddr, Error> {
         let outgoing;
@@ -351,7 +337,7 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
         let stream;
         match source {
             PeerSource::Outgoing(a) => {
-                if Self::has_connected_peers(&peers) {
+                if peers.read().unwrap().values().any(|peer| peer.lock().unwrap().stream.peer_addr().map_or(false, |addr| a.ip() == addr.ip())) {
                     return Err(Error::Handshake);
                 }
                 addr = a;
@@ -360,7 +346,7 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
             },
             PeerSource::Incoming(listener) => {
                 let (s, a) = listener.accept()?;
-                if Self::has_connected_peers(&peers) {
+                if peers.read().unwrap().values().any(|peer| peer.lock().unwrap().stream.peer_addr().map_or(false, |addr| a.ip() == addr.ip())) {
                     s.shutdown(Shutdown::Both).unwrap_or(());
                     return Err(Error::Handshake);
                 }
@@ -486,7 +472,8 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
                                                         break;
                                                     } else {
                                                         if !locked_peer.outgoing {
-                                                            locked_peer.send(self.state.version(locked_peer.stream.peer_addr()?, version.version))?;
+                                                            let remote = locked_peer.stream.peer_addr()?;
+                                                            locked_peer.send(self.state.version(remote, version.version))?;
                                                         }
                                                         locked_peer.send(self.state.verack())?;
                                                         locked_peer.version = Some(VersionCarrier {
@@ -553,30 +540,30 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
         Ok(())
     }
 
-    /// run the message dispatcher loop
-    /// this method does not return unless there is an error obtaining network events
-    /// run in its own thread, which will process all network events
-    pub fn poll_events(&mut self, needed_services: u64, spawn: &mut dyn Spawn) {
-        // events buffer
-        let mut events = Events::with_capacity(EVENT_BUFFER_SIZE);
-        // IO buffer
-        let mut iobuf = vec![0u8; IO_BUFFER_SIZE];
-
-        loop {
-            self.poll.poll(&mut events, None).expect("can not poll mio events");
-            for event in events.iter() {
-                if let Some(server) = self.is_listener(event.token()) {
-                    spawn.spawn(self.add_peer(PeerSource::Incoming(server)).map(|_| ())).expect("can not add peer for incoming connection");
-                } else {
-                    let pid = PeerId::new(network, event.token());
-                    if let Err(error) = self.event_processor(event, pid, needed_services, iobuf.as_mut_slice()) {
-                        use std::error::Error;
-                        self.ban(pid, 10);
-                    }
-                }
-            }
-        }
-    }
+    // /// run the message dispatcher loop
+    // /// this method does not return unless there is an error obtaining network events
+    // /// run in its own thread, which will process all network events
+    // pub fn poll_events(&mut self, needed_services: u64, spawn: &mut dyn Spawn) {
+    //     // events buffer
+    //     let mut events = Events::with_capacity(EVENT_BUFFER_SIZE);
+    //     // IO buffer
+    //     let mut iobuf = vec![0u8; IO_BUFFER_SIZE];
+    //
+    //     loop {
+    //         self.poll.poll(&mut events, None).expect("can not poll mio events");
+    //         for event in events.iter() {
+    //             if let Some(server) = self.is_listener(event.token()) {
+    //                 spawn.spawn(self.add_peer(PeerSource::Incoming(server)).map(|_| ())).expect("can not add peer for incoming connection");
+    //             } else {
+    //                 let pid = PeerId::new(self.chain_type, event.token());
+    //                 if let Err(error) = self.event_processor(event, pid, needed_services, iobuf.as_mut_slice()) {
+    //                     use std::error::Error;
+    //                     self.ban(pid, 10);
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 
     fn is_listener(&self, token: Token) -> Option<Arc<TcpListener>> {
         if let Some(server) = self.listener.lock().unwrap().get(&token) {

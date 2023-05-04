@@ -1,28 +1,21 @@
 [package]
 name = "dash_spv_apple_bindings"
-version = "0.3.6"
+version = "0.3.7"
 description = "C-bindings for using and interoperating with Dash SPV"
 readme = "README.md"
-
 edition = "2021"
 build = "build.rs"
 publish = true
 
 [dependencies]
 
-#[dependencies.dash-spv-masternode-processor]
-#git = "https://github.com/dashpay/masternode-diff-processor"
-## 0.4.4
-#rev = "5a66797"
+[dependencies.dash-spv-masternode-processor]
+path = "../dash-spv-masternode-processor"
 
 [dependencies.rs-merk-verify-c-binding]
 git = "https://github.com/dashpay/rs-merk-verify-c-binding"
 branch = "for-use-in-main-crate"
 version = "0.1.3"
-
-[dependencies.dash-spv-masternode-processor]
-path = "../dash-spv-masternode-processor"
-
 
 [build-dependencies]
 cbindgen = "0.24.3"
