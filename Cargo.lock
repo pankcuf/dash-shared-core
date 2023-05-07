@@ -534,6 +534,9 @@ version = "0.1.0"
 dependencies = [
  "bip0039",
  "dash-spv-masternode-processor",
+ "futures",
+ "futures-timer",
+ "mio",
  "tokio",
 ]
 
@@ -834,6 +837,7 @@ dependencies = [
  "futures-core",
  "futures-task",
  "futures-util",
+ "num_cpus",
 ]
 
 [[package]]

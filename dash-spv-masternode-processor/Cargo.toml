@@ -36,7 +36,7 @@ byte = "0.2"
 core2 = { version = "0.4.0", optional = true, default-features = false }
 dirs-next = "2.0.0"
 ed25519-dalek = "2.0.0-pre.0"
-futures = "0.3.25"
+futures = { version = "0.3.25", features = ["thread-pool"] }
 futures-timer = "3.0.2"
 libc = "0.2.132"
 log = { version = "0.4.*", features = ["std"] }

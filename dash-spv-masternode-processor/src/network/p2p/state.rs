@@ -5,6 +5,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::SystemTime;
+use crate::chain::block::Block;
 use crate::chain::Chain;
 use crate::chain::common::ChainType;
 use crate::chain::network::message::message::{Direction, Message, MessagePayload};
@@ -64,6 +65,23 @@ pub struct DashP2PState {
     // sent_filter: bool,
     // sent_mempool: bool,
     // sent_getblocks: bool,
+}
+
+impl DashP2PState {
+    pub fn new(last_block: Option<Block>, chain_type: ChainType, chain: Shared<Chain>) -> Self {
+        Self {
+            chain,
+            chain_type,
+            nonce: 0,
+            height: AtomicUsize::new(0),
+            local_height: AtomicUsize::new(last_block.as_ref().map_or(0, |b| b.height as usize)),
+            local_hash: Arc::new(last_block.as_ref().map_or(UInt256::MIN, |b| b.block_hash)),
+            user_agent: chain_type.user_agent(),
+            server: false,
+            flags: Default::default(),
+            inventory: Default::default(),
+        }
+    }
 }
 
 
