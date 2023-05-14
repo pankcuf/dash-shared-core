@@ -13,13 +13,14 @@ pub mod file;
 #[cfg(feature = "generate-dashj-tests")]
 pub mod java;
 pub mod key;
+pub mod logging;
 pub mod psbt;
 pub mod script;
 pub mod sec_vec;
+pub mod secure_box;
 pub mod shared;
 pub mod time;
 pub mod timer;
-pub mod secure_box;
 
 pub use self::address::address::from_hash160_for_script_map;
 pub use self::address::address::with_script_pub_key;

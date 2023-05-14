@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>dashd_sporkaddr</key>
+    <string>yibwxyuuKsP6kBsq74vu9p6ju97qEb2B4b</string>
+    <key>dashd_sporkkey</key>
+    <string>cUu1oagVnd2bBGC7EqyijjtFapiLb9yvmaWF4dMaREg6pmXJksHH</string>
+    <key>masternodes</key>
+    <array>
+    	<string>52.43.19.238</string>
+    	<string>34.222.22.233</string>
+    	<string>54.69.244.109</string>
+    	<string>34.221.37.184</string>
+    	<string>35.89.188.16</string>
+    	<string>54.212.27.13</string>
+    	<string>35.92.96.205</string>
+    	<string>35.92.14.125</string>
+    	<string>34.211.243.11</string>
+    	<string>34.215.182.147</string>
+    	<string>35.91.24.231</string>
+    	<string>34.221.177.52</string>
+    </array>
+</dict>
+</plist>

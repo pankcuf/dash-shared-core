@@ -156,8 +156,15 @@ impl<T: Fn(Status) + Send + Sync + Clone> ReachabilityStatusCallback for T {}
 struct Inner {
     pub status: Status,
     handlers: Vec<Arc<dyn ReachabilityStatusCallback<Output=()>>>,
-
 }
+
+impl Inner {
+    pub fn update(&mut self, status: Status) {
+        self.status = status;
+        self.handlers.iter().for_each(|handler| handler(status));
+    }
+}
+
 unsafe impl Send for Inner {}
 unsafe impl Sync for Inner {}
 
@@ -243,8 +250,7 @@ impl ReachabilityManager {
         let reachability_ref = reachability.as_concrete_TypeRef();
         let reachability_context = ReachabilityContext::new(reachability, move |status| {
             if let Ok(mut writer) = inner.try_write() {
-                writer.status = status;
-                writer.handlers.iter().for_each(|handler| handler(status));
+                writer.update(status);
             }
         });
         unsafe {

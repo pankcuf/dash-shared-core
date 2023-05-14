@@ -536,7 +536,9 @@ dependencies = [
  "dash-spv-masternode-processor",
  "futures",
  "futures-timer",
+ "log",
  "mio",
+ "simplelog",
  "tokio",
 ]
 

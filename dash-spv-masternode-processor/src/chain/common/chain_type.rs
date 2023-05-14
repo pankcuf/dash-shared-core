@@ -392,7 +392,8 @@ impl ChainType {
     pub fn standard_dapi_jrpc_port(&self) -> u16 { 3000 }
 
     pub fn localhost(&self) -> SocketAddr {
-        SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::from(0x7f000001), self.standard_port()))
+        // SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::from(0x7f000001), self.standard_port()))
+        SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::from(0x7f000001), 0))
     }
 
     pub fn transaction_version(&self) -> u16 {
@@ -526,8 +527,16 @@ struct PeerPlist {
 // const MAINNET_FIXED_PEERS: &str = include_str!("../../../resources/FixedPeers.plist");
 // const TESTNET_FIXED_PEERS: &str = include_str!("../../../resources/TestnetFixedPeers.plist");
 
-const FIXED_PEERS: &[u8] = include_bytes!("../../../resources/FixedPeers.plist");
+const FIXED_PEERS: &[u8] = include_bytes!("../../../resources/peers/mainnet.plist");
+const DEVNET_SCREWDRIVER_PLIST: &[u8] = include_bytes!("../../../resources/peers/devnet-screwdriver.plist");
 // const TESTNET_FIXED_PEERS: &[u8] = include_bytes!("../../../resources/TestnetFixedPeers.plist");
+
+#[derive(Deserialize)]
+struct DevnetPlist {
+    pub dashd_sporkaddr: String,
+    pub dashd_sporkkey: String,
+    pub masternodes: Vec<String>,
+}
 
 impl ChainType {
     pub fn load_fixed_peer_addresses(&self) -> Vec<IpAddr> {
@@ -536,20 +545,23 @@ impl ChainType {
                 // plist::from_bytes()
                 let plist = plist::from_bytes::<HashMap<String, Vec<u32>>>(FIXED_PEERS).unwrap();
                 let peers = plist.get("mainnet").cloned().unwrap();
-                peers
+                peers.into_iter().map(|value| IpAddr::from(value.to_be_bytes())).collect()
                 // plist::Value::from_file("../../../resources/FixedPeers.plist").unwrap().as_array().iter().map(|v|)
                 // get_plist::<PeerPlist>(MAINNET_FIXED_PEERS).unwrap().array
             },
             Self::TestNet => {
                 let plist = plist::from_bytes::<HashMap<String, Vec<u32>>>(FIXED_PEERS).unwrap();
                 let peers = plist.get("testnet").cloned().unwrap();
-                peers
+                peers.into_iter().map(|value| IpAddr::from(value.to_be_bytes())).collect()
                 // plist::from_bytes::<HashMap<String, Vec<u32>>>(FIXED_PEERS).unwrap().get("testnet").unwrap()
                 // plist::from_bytes::<PeerPlist>(TESTNET_FIXED_PEERS).unwrap().array
                 // get_plist::<PeerPlist>(TESTNET_FIXED_PEERS).unwrap().array
             },
-            _ => panic!("No fixed peers for devnet"),
-        }.into_iter().map(|value| IpAddr::from(value.to_be_bytes())).collect()
+            Self::DevNet(devnet_type) => {
+                let plist = plist::from_bytes::<DevnetPlist>(DEVNET_SCREWDRIVER_PLIST).unwrap();
+                plist.masternodes.into_iter().filter_map(|value| value.parse().ok()).collect()
+            },
+        }
     }
 }
 

@@ -1,5 +1,6 @@
 use std::net::SocketAddr;
 use std::time::SystemTime;
+use hashes::hex::FromHex;
 use crate::chain::common::ChainType;
 use crate::consensus::Encodable;
 use crate::consensus::encode::VarInt;
@@ -65,7 +66,7 @@ fn array_of_hashes_enc(hashes: &Vec<UInt256>, inv_type: InvType, s: &mut Vec<u8>
 }
 
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Request {
     Addr,
     FilterLoad(Vec<u8>),
@@ -74,6 +75,7 @@ pub enum Request {
     Inv(InvType, Vec<UInt256>),
     NotFound(Vec<u8>),
     Ping(u64),
+    Pong(u64),
     Version(SocketAddr, u64, u64, ChainType),
     GovernanceHashes(InvType, Vec<UInt256>),
     GovernanceSync(UInt256, Vec<u8>),
@@ -101,6 +103,7 @@ impl Payload for Request {
             Request::TransactionInv(..) => MessageType::Inv,
             Request::NotFound(..) => MessageType::NotFound,
             Request::Ping(..) => MessageType::Ping,
+            Request::Pong(..) => MessageType::Pong,
             Request::Version(..) => MessageType::Version,
             Request::GovernanceHashes(..) |
             Request::GetDataForTransactionHash(..) |
@@ -120,6 +123,15 @@ impl Request {
 
     pub(crate) fn compile(&self) -> Vec<u8> {
         let mut writer: Vec<u8> = Vec::new();
+        // let len = payload.len() as u32;
+        // let mut writer = Vec::<u8>::new();
+        // magic.enc(&mut writer);
+        // self.r#type.enc(&mut writer);
+        // len.enc(&mut writer);
+        // sha256d::Hash::hash(&payload).enc(&mut writer);
+        // writer.extend_from_slice(&payload);
+        // writer.copy_from_slice(&payload);
+        // writer
         match self {
             Request::Default(..) => {},
             Request::Addr => {
@@ -145,17 +157,21 @@ impl Request {
             Request::Ping(local_nonce) => {
                 local_nonce.enc(&mut writer);
             },
-            Request::Version(socket_addr, services, local_nonce, chain_type) => {
-                chain_type.protocol_version().enc(&mut writer);
-                ENABLED_SERVICES.enc(&mut writer);
-                SystemTime::seconds_since_1970().enc(&mut writer);
-                services.enc(&mut writer);
-                socket_addr.enc(&mut writer);
-                NetAddress::new(LOCAL_HOST, chain_type.standard_port(), ENABLED_SERVICES).enc(&mut writer);
+            Request::Pong(local_nonce) => {
                 local_nonce.enc(&mut writer);
-                chain_type.user_agent().enc(&mut writer);
-                0u32.enc(&mut writer); // last block received
-                0u8.enc(&mut writer); // relay transactions (no for SPV bloom filter mode)
+            },
+            Request::Version(socket_addr, services, local_nonce, chain_type) => {
+                writer.extend_from_slice(&Vec::from_hex("5312010000000000000000004007606400000000050000000000000000000000000000000000ffff55d1f34b4e1f000000000000000000000000000000000000ffff7f0000014e1f4edca9469d06be4e192f6461736877616c6c65743a312e3028746573746e6574292f0000000000").unwrap());
+                // chain_type.protocol_version().enc(&mut writer);
+                // ENABLED_SERVICES.enc(&mut writer);
+                // SystemTime::seconds_since_1970().enc(&mut writer);
+                // services.enc(&mut writer);
+                // socket_addr.enc(&mut writer);
+                // NetAddress::new(LOCAL_HOST, chain_type.standard_port(), ENABLED_SERVICES).enc(&mut writer);
+                // local_nonce.enc(&mut writer);
+                // chain_type.user_agent().enc(&mut writer);
+                // 0u32.enc(&mut writer); // last block received
+                // 0u8.enc(&mut writer); // relay transactions (no for SPV bloom filter mode)
             },
             Request::GovernanceSync(parent_hash, filter_data) => {
                 parent_hash.enc(&mut writer);

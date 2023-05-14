@@ -28,8 +28,10 @@ pub struct Chain {
     pub store_context: StoreContext,
     pub derivation_factory: Factory,
 
-    pub last_sync_block: Option<Weak<block::Kind>>,
-    pub last_terminal_block: Option<Weak<block::Kind>>,
+    pub last_sync_block: Option<Arc<block::Kind>>,
+    pub last_terminal_block: Option<Arc<block::Kind>>,
+    // pub last_sync_block: Option<Weak<block::Kind>>,
+    // pub last_terminal_block: Option<Weak<block::Kind>>,
     pub terminal_blocks: HashMap<UInt256, Arc<block::Kind>>,
     pub sync_blocks: HashMap<UInt256, Arc<block::Kind>>,
 
@@ -46,7 +48,8 @@ pub struct Chain {
 
     pub chain_sync_start_height: u32,
     pub terminal_sync_start_height: u32,
-    best_estimated_block_height: Option<u32>,
+    best_estimated_block_height: u32,
+    pub estimated_block_heights: HashMap<u32, Vec<Peer>>,
 
     /// An array of known hardcoded checkpoints for the chain
     pub checkpoints: Vec<Checkpoint>,
@@ -272,13 +275,13 @@ impl Chain {
     }
 
 
-    pub fn last_sync_block_with_use_checkpoints(&mut self, use_checkpoints: bool) -> Option<Weak<block::Kind>> {
+    pub fn last_sync_block_with_use_checkpoints(&mut self, use_checkpoints: bool) -> Option<Arc<block::Kind>> {
         self.last_sync_block.take().or_else(|| {
-            let mut last: Option<Weak<block::Kind>> = None;
+            let mut last: Option<Arc<block::Kind>> = None;
             if !self.last_persisted_chain_sync_block_hash.is_zero() &&
                 !self.last_persisted_chain_sync_block_chain_work.is_zero() &&
                 self.last_persisted_chain_sync_block_height != BLOCK_UNKNOWN_HEIGHT as u32 {
-                let block = Arc::new(block::Kind::MerkleBlock(MerkleBlock::with(
+                last = Some(Arc::new(block::Kind::MerkleBlock(MerkleBlock::with(
                     2,
                     self.last_persisted_chain_sync_block_hash.clone(),
                     UInt256::MIN,
@@ -294,9 +297,7 @@ impl Chain {
                     None,
                     self.r#type(),
                     Shared::BorrowedRwLock(Weak::new()),
-                )));
-
-                last = Some(Arc::downgrade(&block));
+                ))));
                 self.last_sync_block = last.clone();
             }
             if self.last_sync_block.is_none() && use_checkpoints {
@@ -343,12 +344,11 @@ impl Chain {
         };
         if let Some(cp) = checkpoint {
             if let Some(sb) = self.sync_blocks.get(&cp.hash) {
-                self.last_sync_block = Some(Arc::downgrade(sb));
+                self.last_sync_block = Some(sb.clone());
             } else {
                 let sb = Arc::new(block::Kind::MerkleBlock(MerkleBlock::init_with_checkpoint(&cp, self.r#type(), Shared::BorrowedRwLock(Weak::new()))));
-                let sb_weak = Arc::downgrade(&sb);
-                self.sync_blocks.insert(cp.hash.clone(), sb);
-                self.last_sync_block = Some(sb_weak);
+                self.sync_blocks.insert(cp.hash.clone(), sb.clone());
+                self.last_sync_block = Some(sb);
             }
         }
     }
@@ -362,12 +362,11 @@ impl Chain {
         };
         if let Some(cp) = checkpoint {
             if let Some(tb) = self.terminal_blocks.get(&cp.hash) {
-                self.last_terminal_block = Some(Arc::downgrade(tb));
+                self.last_terminal_block = Some(tb.clone());
             } else {
                 let tb = Arc::new(block::Kind::MerkleBlock(MerkleBlock::init_with_checkpoint(&cp, self.r#type(), Shared::BorrowedRwLock(Weak::new()))));
-                let tb_weak = Arc::downgrade(&tb);
-                self.terminal_blocks.insert(cp.hash.clone(), tb);
-                self.last_terminal_block = Some(tb_weak);
+                self.terminal_blocks.insert(cp.hash.clone(), tb.clone());
+                self.last_terminal_block = Some(tb);
             }
         }
     }
@@ -391,11 +390,11 @@ impl Chain {
     //     }
     // }
 
-    pub fn last_sync_block(&mut self) -> Option<Weak<block::Kind>> {
+    pub fn last_sync_block(&mut self) -> Option<Arc<block::Kind>> {
         self.last_sync_block_with_use_checkpoints(true)
     }
 
-    pub fn last_terminal_block(&mut self) -> Option<Weak<block::Kind>> {
+    pub fn last_terminal_block(&mut self) -> Option<Arc<block::Kind>> {
         self.last_terminal_block.take().or({
             // if let Ok(entity) = BlockEntity::get_last_terminal_block(self.r#type(), self.chain_context()) {
             //     if let Some(b) = MerkleBlock::from_entity(&entity, self) {
@@ -405,7 +404,7 @@ impl Chain {
             // }
             if self.last_terminal_block.is_none() {
                 let last_sync_block_height = self.last_sync_block_height();
-
+                // if we don't have any headers yet, use the latest checkpoint
                 let last_checkpoint = if let Some(cp) = self.terminal_headers_override_use_checkpoint.as_ref() {
                     Some(cp)
                 } else if let Some(cp) = self.last_checkpoint() {
@@ -419,47 +418,104 @@ impl Chain {
                     self.last_terminal_block = self.last_sync_block.clone();
                 }
             }
-            if let Some(b) = &self.last_terminal_block {
-                if let Some(tb) = b.upgrade() {
-                    if tb.height() > self.estimated_block_height() {
-                        self.best_estimated_block_height = Some(tb.height());
-                    }
-                }
+            let best_height = self.last_terminal_block.as_ref().map_or(0, |b| b.height());
+            if best_height > self.estimated_block_height() {
+                self.best_estimated_block_height = best_height;
             }
             self.last_terminal_block.clone()
         })
-
-        // if (_lastTerminalBlock) return _lastTerminalBlock;
-        //
-        // if (!_lastTerminalBlock) {
-        //     // if we don't have any headers yet, use the latest checkpoint
-        //     DSCheckpoint *lastCheckpoint = self.terminalHeadersOverrideUseCheckpoint ? self.terminalHeadersOverrideUseCheckpoint : self.lastCheckpoint;
-        //     uint32_t lastSyncBlockHeight = self.lastSyncBlockHeight;
-        //
-        //     if (lastCheckpoint.height >= lastSyncBlockHeight) {
-        //         [self setLastTerminalBlockFromCheckpoints];
-        //     } else {
-        //         _lastTerminalBlock = self.lastSyncBlock;
-        //     }
-        // }
-        //
-        // if (_lastTerminalBlock.height > self.estimatedBlockHeight) _bestEstimatedBlockHeight = _lastTerminalBlock.height;
-        //
-        // return _lastTerminalBlock;
-
     }
 
     pub fn last_sync_block_height(&mut self) -> u32 {
         self.last_sync_block()
-            .and_then(|b| b.upgrade().map(|b| b.height()))
-            .unwrap_or(0)
+            .map_or(0, |b| b.height())
     }
 
 
     pub fn last_terminal_block_height(&mut self) -> u32 {
         self.last_terminal_block()
-            .and_then(|b| b.upgrade().map(|b| b.height()))
-            .unwrap_or(0)
+            .map_or(0, |b| b.height())
+    }
+
+    pub fn block_for_block_hash(&self, block_hash: &UInt256) -> Option<Arc<block::Kind>> {
+        self.sync_blocks.get(block_hash).cloned()
+            .or(self.terminal_blocks.get(block_hash).cloned())
+            // .or(
+            //     if self.params.allow_insight_blocks_for_verification() {
+            //         self.insight_verified_blocks_by_hash_dictionary.get(block_hash).copied()
+            //     } else {
+            //         None
+            //     }
+            // )
+    }
+
+
+
+    /// this is used as part of a getblocks/getheaders request
+    /// append 10 most recent block checkpointHashes, decending, then continue appending, doubling the step back each time,
+    /// finishing with the genesis block (top, -1, -2, -3, -4, -5, -6, -7, -8, -9, -11, -15, -23, -39, -71, -135, ..., 0)
+    pub fn block_locator_array_for_block(&self, block: Option<Arc<block::Kind>>) -> Vec<UInt256> {
+        let mut locators = Vec::<UInt256>::new();
+        let mut step = 1i32;
+        let mut start = 0i32;
+        let mut b = block.as_ref();
+        let mut last_height = b.map_or(0, |b| b.height());
+        while b.is_some() && b.unwrap().height() > 0 {
+            locators.push(b.unwrap().block_hash());
+            last_height = b.unwrap().height();
+            start += 1;
+            if start >= 10 {
+                step *= 2;
+            }
+            let mut i = 0;
+            while b.is_some() && i < step {
+                let prev = b.unwrap().prev_block();
+                b = self.sync_blocks.get(&prev);
+                if b.is_none() {
+                    b = self.terminal_blocks.get(&prev);
+                }
+                i += 1;
+            }
+        }
+        let mut last_checkpoint: Option<&Checkpoint> = None;
+        // add the last checkpoint we know about previous to this block
+        for checkpoint in &self.checkpoints {
+            if checkpoint.height < last_height && checkpoint.timestamp < b.unwrap().timestamp() {
+                last_checkpoint = Some(checkpoint);
+            } else {
+                break;
+            }
+        }
+        if let Some(last) = last_checkpoint {
+            locators.push(last.hash);
+        }
+        locators
+    }
+
+    pub fn terminal_block_locators_array(&self) -> Vec<UInt256> {
+        let mut locators = Vec::<UInt256>::new();
+        let mut step = 1;
+        let mut start = 0;
+        let mut last_height = 0;//b.height;
+        let mut b = self.last_terminal_block.as_ref();
+        while b.is_some() && b.unwrap().height() > 0 {
+            locators.push(b.unwrap().block_hash());
+            last_height = b.unwrap().height();
+            start += 1;
+            if start >= 10 {
+                step *= 2;
+            }
+            let mut i = 0;
+            while b.is_some() && i < step {
+                b = self.terminal_blocks.get(&b.unwrap().prev_block());
+                i += 1;
+            }
+        }
+        // then add the last checkpoint we know about previous to this header
+        if let Some(last_checkpoint) = self.checkpoints.iter().find(|checkpoint| checkpoint.height < last_height) {
+            locators.push(last_checkpoint.hash);
+        }
+        locators
     }
 
 
@@ -516,14 +572,29 @@ impl Chain {
     }
 
     pub fn estimated_block_height(&mut self) -> u32 {
-        todo!()
-        // if let Some(bebh) = self.best_estimated_block_height {
-        //     bebh
-        // } else {
-        //     let bebh = self.decide_from_peer_soft_consensus_estimated_block_height();
-        //     self.best_estimated_block_height = Some(bebh);
-        //     bebh
-        // }
+        if self.best_estimated_block_height > 0 {
+            self.best_estimated_block_height
+        } else {
+            let h = self.decide_from_peer_soft_consensus_estimated_block_height();
+            self.best_estimated_block_height = h;
+            h
+        }
+    }
+
+    pub fn decide_from_peer_soft_consensus_estimated_block_height(&self) -> u32 {
+        let mut max_count = 0u32;
+        let mut temp_best_estimated_block_height = 0u32;
+        for (height, announcers) in &self.estimated_block_heights {
+            let announcers_count = announcers.len() as u32;
+            if announcers_count > max_count {
+                temp_best_estimated_block_height = *height;
+                max_count = announcers_count;
+            } else if announcers_count == max_count && temp_best_estimated_block_height < *height {
+                // use the latest if deadlocked
+                temp_best_estimated_block_height = *height;
+            }
+        }
+        temp_best_estimated_block_height
     }
 
     pub fn needs_initial_terminal_headers_sync(&mut self) -> bool {

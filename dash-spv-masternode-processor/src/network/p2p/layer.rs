@@ -19,233 +19,85 @@
 //! This module establishes network connections and routes messages between the P2P network and this node
 //!
 
-use futures::{future, Future, FutureExt, TryFutureExt};
-use futures::task::{Poll as Async, Spawn, SpawnExt};
-use futures::task::Waker;
-
-use std::{
-    cmp::min,
-    collections::HashMap,
-    io,
-    io::{Read, Write},
-    net::{Shutdown, SocketAddr},
-    sync::{Arc, atomic::{AtomicUsize, Ordering}, mpsc, Mutex, RwLock},
-    thread,
-    time::{Duration, SystemTime}
-};
-use std::net::SocketAddrV4;
-use futures::future::Either;
+use std::{cmp::min, collections::HashMap, io, io::{Read, Write}, net::{Shutdown, SocketAddr, SocketAddrV4}, sync::{Arc, atomic::{AtomicUsize, Ordering}, mpsc, Mutex, RwLock}, time::{Duration, SystemTime}};
+use std::collections::HashSet;
+use futures::{future, future::Either, Future, FutureExt, task::{Poll, Spawn, SpawnExt}, TryFutureExt};
 use futures_timer::Delay;
-use mio::{Events, Interest, Poll, Token};
-use mio::event::Event;
-use mio::net::{TcpListener, TcpStream};
-use crate::chain::Chain;
-use crate::chain::common::{ChainType, IHaveChainSettings};
-use crate::chain::network::message::message::{Message, Payload};
-use crate::chain::network::message::response::Response;
-use crate::chain::network::MessageType;
+use mio::{event::Event, Events, Interest, net::{TcpListener, TcpStream}, Token};
+use crate::chain::{Chain, common::ChainType, network::message::{Message, Response}};
 use crate::manager::peer_manager::Error;
-use crate::network::p2p::peer::{Peer, PeerId, PeerMap};
-use crate::network::p2p::state::PeerState;
-use crate::network::p2p::state_flags::PeerStateFlags;
+use crate::network::p2p::{DashP2PState, PeerSelector};
+use crate::network::pipeline::ThreadName;
 use crate::util::{Shared, TimeUtil};
+use super::{ListenerMap, P2PControlDispatcher, P2PControlNotification, P2PControlReceiver, P2PNotificationDispatcher, P2PNotificationSender, Peer, PeerId, PeerSource, PeerState, PeerStateFlags, VersionCarrier, WakerMap};
 
-pub const IO_BUFFER_SIZE:usize = 1024*1024;
-pub const EVENT_BUFFER_SIZE:usize = 1024;
-const CONNECT_TIMEOUT_SECONDS: u64 = 5;
-const BAN :u32 = 100;
-
-pub type ListenerMap = HashMap<Token, Arc<TcpListener>>;
-pub type WakerMap = HashMap<PeerId, Waker>;
-
-/// A message from network to downstream
-#[derive(Clone)]
-pub enum P2PNotification {
-    Outgoing(Message),
-    Incoming(PeerId, Response),
-    Connected(PeerId, Option<SocketAddr>),
-    Disconnected(PeerId, bool/*banned*/)
-}
-
-/// a map of peer id to peers
-pub type P2PNotificationReceiver = mpsc::Receiver<P2PNotification>;
-pub type P2PNotificationSender = mpsc::SyncSender<P2PNotification>;
-
-pub enum P2PControlNotification {
-    Send(PeerId, Message),
-    Broadcast(Message),
-    Ban(PeerId, u32),
-    Disconnect(PeerId),
-    Height(u32),
-    Bind(SocketAddr)
-}
+const EVENT_BUFFER_SIZE: usize = 1024;
+pub(crate) const IO_BUFFER_SIZE: usize = EVENT_BUFFER_SIZE*EVENT_BUFFER_SIZE;
+pub(crate) const CONNECT_TIMEOUT_SECONDS: u64 = 10;
 
 
-type P2PControlReceiver = mpsc::Receiver<P2PControlNotification>;
-
-#[derive(Clone)]
-pub struct P2PControlDispatcher {
-    sender: Arc<Mutex<mpsc::Sender<P2PControlNotification>>>,
-    peers: Arc<RwLock<PeerMap>>,
-    pub back_pressure: usize
-}
-
-impl P2PControlDispatcher {
-    pub fn new(sender: mpsc::Sender<P2PControlNotification>, peers: Arc<RwLock<PeerMap>>, back_pressure: usize) -> P2PControlDispatcher {
-        P2PControlDispatcher { sender: Arc::new(Mutex::new(sender)), peers, back_pressure }
-    }
-
-    pub fn send(&self, control: P2PControlNotification) {
-        self.sender.lock()
-            .unwrap()
-            .send(control)
-            .expect("P2P control send failed");
-    }
-
-    pub fn send_network(&self, peer: PeerId, msg: Message) {
-        self.send(P2PControlNotification::Send(peer, msg))
-    }
-
-    pub fn ban(&self, peer: PeerId, increment: u32) {
-        self.send(P2PControlNotification::Ban(peer, increment))
-    }
-
-    pub fn peer_version(&self, peer: PeerId) -> Option<VersionCarrier> {
-        if let Some(peer) = self.peers.read().unwrap().get(&peer) {
-            let locked_peer = peer.lock().unwrap();
-            return locked_peer.version.clone();
-        }
-        None
-    }
-
-    pub fn peers(&self) -> Vec<PeerId> {
-        self.peers.read().unwrap().keys().cloned().collect::<Vec<_>>()
-    }
-}
-
-#[derive(Clone)]
-pub enum PeerSource {
-    Outgoing(SocketAddr),
-    Incoming(Arc<TcpListener>)
-}
-
-#[derive(Clone)]
-pub struct P2PNotificationDispatcher {
-    sender: Arc<Mutex<P2PNotificationSender>>
-}
-
-impl P2PNotificationDispatcher {
-    pub fn new(sender: P2PNotificationSender) -> P2PNotificationDispatcher {
-        P2PNotificationDispatcher { sender: Arc::new(Mutex::new(sender)) }
-    }
-
-    pub fn send(&self, msg: P2PNotification) {
-        self.sender.lock()
-            .unwrap()
-            .send(msg)
-            .expect("P2P message send failed");
-    }
-}
-
-#[derive(Clone)]
-pub struct VersionCarrier {
-    /// The P2P network protocol version
-    pub version: u32,
-    /// A bitmask describing the services supported by this node
-    pub services: u64,
-    /// The time at which the `version` message was sent
-    pub timestamp: u64,
-    /// The network address of the peer receiving the message
-    pub receiver_address: SocketAddr,
-    /// The network address of the peer sending the message
-    pub sender_address: SocketAddr,
-    /// A random nonce used to detect loops in the network
-    pub nonce: u64,
-    /// A string describing the peer's software
-    pub user_agent: String,
-    /// The height of the maximum-work blockchain that the peer is aware of
-    pub start_height: u32,
-    /// Whether the receiving peer should relay messages to the sender; used
-    /// if the sender is bandwidth-limited and would like to support bloom
-    /// filtering. Defaults to true.
-    pub relay: bool
-}
-
-pub struct P2P<STATE: PeerState + Send + Sync + 'static> {
-    dispatcher: P2PNotificationDispatcher,
-    pub state: STATE,
+pub struct P2P {
+    notification_dispatcher: P2PNotificationDispatcher,
+    pub state: DashP2PState,
     pub chain_type: ChainType,
     pub chain: Shared<Chain>,
-    peers: Arc<RwLock<PeerMap>>,
-    poll: Arc<Mutex<Poll>>,
+    peer_selector: Arc<RwLock<PeerSelector>>,
+    // peers: Arc<RwLock<PeerMap>>,
+    poll: Arc<RwLock<mio::Poll>>,
     wakers: Arc<Mutex<WakerMap>>,
     listeners: Arc<Mutex<ListenerMap>>,
     next_peer_id: AtomicUsize,
 }
 
-impl<STATE: PeerState + Send + Sync> P2P<STATE> {
-    pub fn new(state: STATE, dispatcher: P2PNotificationDispatcher, back_pressure: usize, chain_type: ChainType, chain: Shared<Chain>) -> (Arc<Mutex<P2P<STATE>>>, P2PControlDispatcher) {
+impl P2P {
+    pub fn new(notification_sender: P2PNotificationSender, back_pressure: usize, chain_type: ChainType, chain: Shared<Chain>) -> (Arc<P2P>, P2PControlDispatcher, HashSet<SocketAddr>) {
+        let state = DashP2PState::new(None, chain_type, chain.clone());
         let (control_sender, control_receiver) = mpsc::channel();
-        let peers = Arc::new(RwLock::new(PeerMap::new()));
-        let p2p = Arc::new(Mutex::new(P2P {
-            dispatcher,
+        let selector = PeerSelector::new(chain_type);
+        let addresses = selector.select_more_peers();
+
+        let peer_selector = Arc::new(RwLock::new(selector));
+        let notification_dispatcher = P2PNotificationDispatcher::new(notification_sender);
+        let control_dispatcher = P2PControlDispatcher::new(control_sender, peer_selector.clone(), back_pressure);
+        let poll = Arc::new(RwLock::new(mio::Poll::new().unwrap()));
+        let p2p = P2P {
+            notification_dispatcher,
             state,
             chain_type,
             chain,
-            peers: peers.clone(),
-            poll: Arc::new(Mutex::new(Poll::new().unwrap())),
+            peer_selector,
+            poll,
             next_peer_id: AtomicUsize::new(0),
             wakers: Arc::new(Mutex::new(HashMap::new())),
             listeners: Arc::new(Mutex::new(HashMap::new())),
-        }));
-        let p2p2 = p2p.clone();
-        thread::Builder::new()
-            .name(format!("peer_manager_{}", chain_type.name()))
-            .spawn(move || p2p2.lock().unwrap().control_loop(control_receiver))
+        };
+        // let p2parc = Arc::new(RwLock::new(p2p));
+        let p2parc = Arc::new(p2p);
+        let p2p2 = p2parc.clone();
+        ThreadName::P2PManager
+            .thread(chain_type)
+            .spawn(move || p2p2.control_loop(control_receiver))
             .unwrap();
-        (p2p, P2PControlDispatcher::new(control_sender, peers, back_pressure))
+        (p2parc, control_dispatcher, addresses)
     }
 
     pub fn connected_peers(&self) -> Vec<SocketAddr> {
-        self.peers.read().unwrap().values()
-            .filter_map(|peer| peer.lock().unwrap().stream.peer_addr().ok())
-            .collect()
+        self.peer_selector.read().unwrap().connected_peers()
     }
 
     fn control_loop(&self, receiver: P2PControlReceiver) {
-        while let Ok(control) = receiver.recv() {
-            match control {
-                P2PControlNotification::Ban(peer_id, score) => {
-                    self.ban(peer_id, score);
+        while let Ok(notification) = receiver.recv() {
+            debug!("control_loop: {:?}", notification);
+            match notification {
+                P2PControlNotification::Ban(peer_id, score) => self.ban(peer_id, score),
+                P2PControlNotification::Disconnect(pid) => self.disconnect(pid, false),
+                P2PControlNotification::Height(height) => self.state.set_height(height),
+                P2PControlNotification::Broadcast(message) => self.broadcast(message),
+                P2PControlNotification::Send(pid, message) => self.send(pid, message),
+                P2PControlNotification::Bind(addr) => match self.add_listener(addr) {
+                    Ok(()) => debug!("listen to {}", addr),
+                    Err(err) => debug!("failed to listen to {} with {}", addr, err)
                 },
-                P2PControlNotification::Disconnect(peer_id) => {
-                    self.disconnect(peer_id, false);
-                },
-                P2PControlNotification::Height(height) => {
-                    self.state.set_height(height);
-                }
-                P2PControlNotification::Bind(addr) => {
-                    match self.add_listener(addr) {
-                        Ok(()) => println!("listen to {}", addr),
-                        Err(err) => println!("failed to listen to {} with {}", addr, err)
-                    }
-                },
-                P2PControlNotification::Broadcast(message) => {
-                    for peer in self.peers.read().unwrap().values() {
-                        peer.lock()
-                            .unwrap()
-                            .send(message.clone())
-                            .expect("could not send to peer");
-                    }
-                }
-                P2PControlNotification::Send(peer_id, message) => {
-                    if let Some(peer) = self.peers.read().unwrap().get(&peer_id) {
-                        peer.lock()
-                            .unwrap()
-                            .send(message)
-                            .expect("could not send to peer");
-                    }
-                }
             }
         }
         panic!("P2P Control loop failed");
@@ -254,7 +106,7 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
     fn add_listener(&self, bind: SocketAddr) -> Result<(), io::Error> {
         let mut listener = TcpListener::bind(bind)?;
         let token = Token(self.next_peer_id.fetch_add(1, Ordering::Relaxed));
-        if let Ok(poll) = self.poll.lock() {
+        if let Ok(poll) = self.poll.read() {
             poll.registry().register(&mut listener, token, Interest::READABLE | Interest::WRITABLE)?;
         }
         self.listeners.lock().unwrap().insert(token, Arc::new(listener));
@@ -265,25 +117,24 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
     pub fn add_peer(&self, source: PeerSource) -> impl Future<Output=Result<SocketAddr, Error>> + Send {
         let token = Token(self.next_peer_id.fetch_add(1, Ordering::Relaxed));
         let pid = PeerId::new(self.chain_type, token);
-        let peers = self.peers.clone();
-        let peers2 = self.peers.clone();
+        let polling_selector = self.peer_selector.clone();
+        let connecting_selector = self.peer_selector.clone();
         let waker = self.wakers.clone();
-
+        debug!("add_peer: {:?}", source);
         self.connecting(pid, source)
             .map_err(move |e| {
-                let mut peers = peers2.write().unwrap();
-                if let Some(peer) = peers.remove(&pid) {
-                    peer.lock().unwrap().stream.shutdown(Shutdown::Both).unwrap_or(());
-                }
+                debug!("add_peer.connecting.error: {:?}", e);
+                connecting_selector.write().unwrap().shutdown(pid);
                 e
             })
             .and_then(move |addr| {
+                debug!("add_peer.connecting.success: {:?}", addr);
                 future::poll_fn(move |ctx| {
-                    if peers.read().unwrap().get(&pid).is_some() {
+                    if polling_selector.read().unwrap().peer_by_id(pid).is_some() {
                         waker.lock().unwrap().insert(pid, ctx.waker().clone());
-                        Async::Pending
+                        Poll::Pending
                     } else {
-                        Async::Ready(Ok(addr))
+                        Poll::Ready(Ok(addr))
                     }
                 })
             })
@@ -291,91 +142,77 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
 
     fn connecting(&self, pid: PeerId, source: PeerSource) -> impl Future<Output=Result<SocketAddr, Error>> + Send {
         let version = self.state.version(self.state.chain_type().localhost(),self.state.chain_type().protocol_version());
-        let peers = self.peers.clone();
-        let peers2 = self.peers.clone();
+        let connecting_selector = self.peer_selector.clone();
+        let poll_selector = self.peer_selector.clone();
         let poll = self.poll.clone();
         let waker = self.wakers.clone();
         // todo: avoid cloning
-        future::poll_fn(move |_|
-            match Self::connect(version.clone(), peers.clone(), poll.clone(), pid, source.clone()) {
-                Ok(addr) => Async::Ready(Ok(addr)),
-                Err(e) => Async::Ready(Err(e))
+        debug!("connecting: {}", pid);
+        future::poll_fn(move |_| {
+            debug!("connecting.poll_fn: {}", pid);
+            match Self::connect(version.clone(), connecting_selector.clone(), poll.clone(), pid, source.clone()) {
+                Ok(addr) => Poll::Ready(Ok(addr)),
+                Err(e) => Poll::Ready(Err(e))
             }
-        ).and_then(move |addr| {
+        }).and_then(move |addr| {
             let handshake_future = future::poll_fn(move |ctx|
-                if let Some(peer) = peers2.read().unwrap().get(&pid) {
+                if let Some(peer) = poll_selector.read().unwrap().peer_by_id(pid) {
                     if peer.lock().unwrap().connected {
-                        Async::Ready(Ok(addr))
+                        debug!("connecting.handshake.ready: {} {:?}", pid, addr);
+                        Poll::Ready(Ok(addr))
                     } else {
                         waker.lock().unwrap().insert(pid, ctx.waker().clone());
-                        Async::Pending
+                        debug!("connecting.handshake.pending: {} {:?}", pid, addr);
+                        Poll::Pending
                     }
                 } else {
-                    Async::Ready(Err(Error::Handshake))
+                    debug!("connecting.handshake.no_peer: {} {:?}", pid, addr);
+                    Poll::Ready(Err(Error::Handshake))
                 }
             );
-            let timeout_future = Delay::new(Duration::from_secs(CONNECT_TIMEOUT_SECONDS));
-            future::select(handshake_future, timeout_future)
+            debug!("connecting.and_then: {}", pid);
+            future::select(handshake_future, Delay::new(Duration::from_secs(CONNECT_TIMEOUT_SECONDS)))
                 .map(|res| match res {
                     Either::Left((status, timeout)) => status,
                     Either::Right(..) => Err(Error::HandshakeTimeout)
                 })
-            // future::select_ok(vec![handshake_future, timeout_future]).map_err(|_| Error::HandshakeTimeout)
         })
     }
 
-    fn has_connected_peers(peers: &Arc<RwLock<PeerMap>>) -> bool {
-        peers.read().unwrap().values().any(|peer| peer.lock().unwrap().stream.peer_addr().map_or(false, |addr| a.ip() == addr.ip()))
-    }
-
-    // initiate connection to peer
-    fn connect(version: Message, peers: Arc<RwLock<PeerMap>>, poll: Arc<Poll>, pid: PeerId, source: PeerSource) -> Result<SocketAddr, Error> {
-        let outgoing;
-        let addr;
-        let stream;
-        match source {
+    fn connect(version: Message, selector: Arc<RwLock<PeerSelector>>, poll: Arc<RwLock<mio::Poll>>, pid: PeerId, source: PeerSource) -> Result<SocketAddr, Error> {
+        debug!("connect: {:?}", source);
+        let (is_outgoing, addr, stream) = match source {
             PeerSource::Outgoing(a) => {
-                if Self::has_connected_peers(&peers) {
+                if selector.read().unwrap().has_peer_with_address(a) {
                     return Err(Error::Handshake);
                 }
-                addr = a;
-                outgoing = true;
-                stream = TcpStream::connect(addr)?;
+                (true, a, TcpStream::connect(a)?)
             },
             PeerSource::Incoming(listener) => {
                 let (s, a) = listener.accept()?;
-                if Self::has_connected_peers(&peers) {
+                if selector.read().unwrap().has_peer_with_address(a) {
                     s.shutdown(Shutdown::Both).unwrap_or(());
                     return Err(Error::Handshake);
                 }
-                addr = a;
-                stream = s;
-                outgoing = false;
+                (false, a, s)
             }
         };
-        let peer = Mutex::new(Peer::new(pid, stream, poll.clone(), outgoing)?);
-        let mut peers = peers.write().unwrap();
-        peers.insert(pid, peer);
-        let stored_peer = peers.get(&pid).unwrap();
-        if outgoing {
-            stored_peer.lock().unwrap().register_write()?;
-        } else {
-            stored_peer.lock().unwrap().register_read()?;
-        }
-        if outgoing {
-            peers.get(&pid).unwrap().lock().unwrap().send(version)?;
+
+        let mut selector = selector.write().unwrap();
+        selector.add(Peer::new(pid, stream, poll, is_outgoing)?)?;
+        if is_outgoing {
+            selector.peer_by_id(pid).unwrap().lock().unwrap().send(version)?;
         }
         Ok(addr)
     }
 
     fn disconnect(&self, pid: PeerId, banned: bool) {
-        self.dispatcher.send(P2PNotification::Disconnected(pid, banned));
+        debug!("disconnect: {:?} {}", pid, banned);
+        self.notification_dispatcher.send_disconnected(pid, banned);
         {
             // remove from peers before waking up, so disconnect is recognized
-            let mut peers = self.peers.write().unwrap();
-            if let Some(peer) = peers.remove(&pid) {
-                peer.lock().unwrap().stream.shutdown(Shutdown::Both).unwrap_or(());
-            }
+            let mut selector = self.peer_selector.write().unwrap();
+            selector.shutdown(pid);
         }
         {
             let mut wakers = self.wakers.lock().unwrap();
@@ -386,38 +223,70 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
     }
 
     fn connected(&self, pid: PeerId, address: Option<SocketAddr>) {
-        self.dispatcher.send(P2PNotification::Connected(pid, address));
+        debug!("connected: {:?} {:?}", pid, address);
+        self.notification_dispatcher.send_connected(pid, address);
     }
 
     fn ban(&self, pid: PeerId, increment: u32) {
-        let mut disconnect = false;
-        if let Some(peer) = self.peers.read().unwrap().get(&pid) {
-            let mut locked_peer = peer.lock().unwrap();
-            locked_peer.ban += increment;
-            if locked_peer.ban >= BAN {
-                disconnect = true;
-            }
-        }
-        if disconnect {
+        debug!("ban: {:?} {:?}", pid, increment);
+        if self.peer_selector.read().unwrap().ban(pid, increment) {
             self.disconnect(pid, true);
+        }
+    }
+
+    fn broadcast(&self, message: Message) {
+        for peer in self.peer_selector.read().unwrap().peers.values() {
+            peer.lock()
+                .unwrap()
+                .send(message.clone())
+                .expect("could not send to peer");
+        }
+    }
+
+    fn send(&self, pid: PeerId, message: Message) {
+        debug!("send: {:?}", pid);
+        if let Some(peer) = self.peer_selector.read().unwrap().peer_by_id(pid) {
+            peer.lock()
+                .unwrap()
+                .send(message)
+                .expect("could not send to peer");
         }
     }
 
     fn event_processor(&self, event: &Event, pid: PeerId, needed_services: u64, iobuf: &mut [u8]) -> Result<(), Error> {
         if event.is_read_closed() || event.is_error() {
+        // if event.is_error() {
+            debug!("event_processor -> disconnect");
+            if let Some(peer) = self.peer_selector.read().unwrap().peer_by_id(pid) {
+                debug!("event_processor -> peer lock");
+                let mut locked_peer = peer.lock().unwrap();
+                debug!("event_processor -> peer unlocked");
+                match locked_peer.stream.read(iobuf) {
+                    Ok(len) => {
+                        debug!("closed with message: {} {:?}", len, &iobuf[..len]);
+                    },
+                    Err(err) => {
+                        debug!("closed with error: {}", err);
+                    }
+                }
+            }
             self.disconnect(pid, false);
         } else {
             // check for ability to write before read, to get rid of data before buffering more read
             // token should only be registered for write if there is a need to write
             // to avoid superfluous wakeups from poll
             if event.is_writable() {
-                if let Some(peer) = self.peers.read().unwrap().get(&pid) {
+                debug!("event_processor -> is_writable");
+                if let Some(peer) = self.peer_selector.read().unwrap().peer_by_id(pid) {
                     let mut locked_peer = peer.lock().unwrap();
+                    debug!("event_processor -> is_writable. locked_peer");
                     loop {
                         let mut get_next = true;
                         if let Ok(len @ 1..) = locked_peer.write_buffer.read_ahead(iobuf) {
+                            debug!("event_processor -> is_writable. loop: {}", len);
                             let mut wrote = 0;
                             while let Ok(wlen) = locked_peer.stream.write(&iobuf[wrote..len]) {
+                                debug!("event_processor -> is_writable. written: {}", wlen);
                                 if wlen == 0 {
                                     get_next = false;
                                     break;
@@ -431,7 +300,7 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
                             }
                         }
                         if get_next {
-                            if let Some(message) = locked_peer.try_receive() {
+                            if let Ok(message) = locked_peer.try_receive() {
                                 self.state.encode(self.state.pack(message), &mut locked_peer.write_buffer)?;
                             } else {
                                 locked_peer.reregister_read()?;
@@ -442,20 +311,25 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
                 }
             }
             if event.is_readable() {
+                debug!("event_processor -> is_readable");
                 let mut incoming = Vec::new();
                 let mut disconnect = false;
                 let mut ban = false;
                 let mut handshake = false;
                 let mut address = None;
-                if let Some(peer) = self.peers.read().unwrap().get(&pid) {
+                if let Some(peer) = self.peer_selector.read().unwrap().peer_by_id(pid) {
+                    debug!("event_processor -> peer lock");
                     let mut locked_peer = peer.lock().unwrap();
+                    debug!("event_processor -> peer unlocked");
                     match locked_peer.stream.read(iobuf) {
                         Ok(len) => {
+                            debug!("event_processor -> stream.read: {:?}", len);
                             if len == 0 {
                                 disconnect = true;
                             }
                             locked_peer.read_buffer.write_all(&iobuf[0..len])?;
                             while let Some(msg) = self.state.decode(&mut locked_peer.read_buffer)? {
+                                debug!("event_processor -> decoded msg {:?}", msg);
                                 let has_no_version = locked_peer.version.is_none();
                                 let has_no_verack = !locked_peer.flags.contains(PeerStateFlags::GOT_VERACK);
                                 if locked_peer.connected {
@@ -531,7 +405,7 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
                     }
                     for msg in incoming {
                         if let Ok(m) = self.state.unpack(msg) {
-                            self.dispatcher.send(P2PNotification::Incoming(pid, m));
+                            self.notification_dispatcher.send_incoming(pid, m);
                         } else {
                             self.disconnect(pid, true);
                         }
@@ -543,29 +417,50 @@ impl<STATE: PeerState + Send + Sync> P2P<STATE> {
     }
 
     pub fn connected_peers_count(&self) -> usize {
-        self.peers.read().unwrap().len()
+        self.peer_selector.read().unwrap().len()
+    }
+
+    pub fn select_peers(&self) -> Vec<SocketAddr> {
+        self.peer_selector.read().unwrap().select_peers()
     }
 
     /// run the message dispatcher loop
     /// this method does not return unless there is an error obtaining network events
     /// run in its own thread, which will process all network events
-    pub fn poll_events(&mut self, needed_services: u64, spawn: &mut dyn Spawn) {
+    pub fn poll_events(&self, needed_services: u64, executor: &mut dyn Spawn) {
         let mut events = Events::with_capacity(EVENT_BUFFER_SIZE);
         let mut iobuf = vec![0u8; IO_BUFFER_SIZE];
-        if let Ok(mut poll) = self.poll.lock() {
-            loop {
-                poll.poll(&mut events, None).expect("can not poll mio events");
-                for event in events.iter() {
-                    if let Some(listener) = self.listeners.lock().unwrap().get(&event.token()) {
-                        spawn.spawn(self.add_peer(PeerSource::Incoming(listener.clone())).map(|_| ())).expect("can not add peer for incoming connection");
-                    } else {
-                        let pid = PeerId::new(self.chain_type, event.token());
-                        if let Err(error) = self.event_processor(event, pid, needed_services, iobuf.as_mut_slice()) {
-                            self.ban(pid, 10);
-                        }
+        loop {
+            let mut poll = self.poll.write().unwrap();
+            poll.poll(&mut events, Some(Duration::from_millis(100))).expect("can not poll mio events");
+            drop(poll);
+            if !events.is_empty() {
+                debug!("poll_events: {:?}", events);
+            }
+            for event in events.iter() {
+                if let Some(listener) = self.listeners.lock().unwrap().get(&event.token()) {
+                    executor.spawn(self.add_peer(PeerSource::Incoming(listener.clone())).map(|_| ()))
+                        .expect("can not add peer for incoming connection");
+                } else {
+                    let pid = PeerId::new(self.chain_type, event.token());
+                    if let Err(error) = self.event_processor(event, pid, needed_services, iobuf.as_mut_slice()) {
+                        self.ban(pid, 10);
                     }
                 }
             }
+        }
+    }
+
+    pub fn select_more_peers(&self, executor: &mut dyn Spawn) {
+        if let Ok(selector) = self.peer_selector.try_read() {
+            selector
+                .select_more_peers()
+                .iter()
+                .for_each(|choice| {
+                    executor.spawn(self.add_peer(PeerSource::Outgoing(*choice)).map(|_| ()))
+                        .expect("can not add peer for outgoing connection");
+
+                })
         }
     }
 

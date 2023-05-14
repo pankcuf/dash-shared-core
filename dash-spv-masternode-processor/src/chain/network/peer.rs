@@ -3,7 +3,6 @@ use std::fmt::{Debug, Formatter};
 use std::hash::Hasher;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
-use std::thread;
 use std::time::SystemTime;
 use byte::{BytesExt, Iter};
 use byte::ctx::Bytes;
@@ -41,6 +40,7 @@ use crate::chain::network::message::addr::{Addr, AddrInfo};
 use crate::chain::network::message::not_found::NotFound;
 use crate::chain::network::message::reject::Reject;
 use crate::chain::network::message::version::Version;
+use crate::network::pipeline::ThreadName;
 use crate::util::{Shared, TimeUtil};
 use crate::util::data_ops::{hex_with_data, short_hex_string_from};
 
@@ -1351,11 +1351,9 @@ impl Peer {
         //     return;
         // }
         self.reset();
-
-        thread::Builder::new()
-            .name(format!("peer.{}", self.socket_addr))
+        ThreadName::Peer(self.socket_addr)
+            .thread(self.chain_type)
             .spawn(move || {
-
 
             })
             .expect("Can't spawn peer thread");

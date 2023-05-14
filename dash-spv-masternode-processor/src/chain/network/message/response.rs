@@ -4,10 +4,11 @@ use crate::chain::network::message::inventory::Inventory;
 use crate::chain::network::message::message::Payload;
 use crate::chain::network::MessageType;
 use crate::chain::tx;
+use crate::crypto::UInt256;
 
 // pub type Res = Result<Response, peer_manager::Error>;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Response {
     Unknown,
     Version(Version),
@@ -15,10 +16,12 @@ pub enum Response {
     Addr(Addr),
     Inventory(Inventory),
     Tx(tx::Kind),
+    Ping(u64),
+    Pong(u64),
     // AddrV2(Addr),
 
     // GetBlocks(Vec<UInt256>, UInt256, u32),
-    // GetHeaders(Vec<UInt256>, UInt256, u32),
+    Headers(Vec<UInt256>, UInt256, u32),
 }
 
 impl Payload for Response {
@@ -31,6 +34,9 @@ impl Payload for Response {
             Response::Inventory(_) => MessageType::Inv,
             Response::Addr(_) => MessageType::Addr,
             Response::Tx(_) => MessageType::Tx,
+            Response::Headers(_, _, _) => MessageType::Getheaders,
+            Response::Ping(_) => MessageType::Ping,
+            Response::Pong(_) => MessageType::Pong,
         }
     }
 }
