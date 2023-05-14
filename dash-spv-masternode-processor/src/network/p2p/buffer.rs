@@ -105,7 +105,7 @@ impl Buffer {
     }
 
     // advance position by len
-    pub(crate) fn advance (&mut self, len: usize) -> usize {
+    pub(crate) fn advance(&mut self, len: usize) -> usize {
         let mut have = 0;
         // until read enough
         while have < len {

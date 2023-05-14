@@ -8,7 +8,9 @@ edition = "2021"
 dash-spv-masternode-processor = { path = "../dash-spv-masternode-processor" }
 #tokio = { version = "1.25.0", features = ["full"] }
 bip0039 = "0.11.0"
+log = { version = "0.4.*", features = ["std"] }
 mio = "0.8.6"
 futures = { version = "0.3.25", features = ["thread-pool"] }
 futures-timer = "3.0.2"
+simplelog = "0.12.1"
 tokio = "1.28.0"

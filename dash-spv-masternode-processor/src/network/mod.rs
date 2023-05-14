@@ -5,8 +5,9 @@ use crate::crypto::UInt128;
 
 pub mod constants;
 pub mod network_context;
-pub mod reachability_manager;
+pub mod pipeline;
 pub mod p2p;
+pub mod reachability_manager;
 
 
 impl Encodable for SocketAddr {

@@ -2,7 +2,6 @@ use std::io;
 use std::io::{Error, Read, Write};
 use byte::ctx::{Endian, NULL, Str};
 use byte::{BytesExt, TryRead};
-use hashes::{Hash, sha256d};
 use crate::chain::common::ChainType;
 use crate::chain::network::message::addr::Addr;
 use crate::chain::network::message::inventory::Inventory;
@@ -259,7 +258,8 @@ impl From<MessageType> for [u8; 12] {
     fn from(value: MessageType) -> Self {
         let mut command = [0u8; 12];
         let s: &str = value.into();
-        command.copy_from_slice(s.as_bytes());
+        let bytes = s.as_bytes();
+        command[..bytes.len()].copy_from_slice(bytes);
         command
     }
 }
@@ -268,7 +268,7 @@ pub trait Payload: Sized + Clone {
     fn r#type(&self) -> MessageType;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Direction {
     Incoming,
     Outgoing
@@ -284,7 +284,7 @@ impl Direction {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CheckedPayload {
     pub(crate) message_type: MessageType,
     pub(crate) payload: CheckedData,
@@ -304,7 +304,7 @@ impl io::Read for CheckedPayload {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum MessagePayload {
     Request(Request),
     Response(Response),
@@ -321,7 +321,7 @@ impl Payload for MessagePayload {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Message {
     // pub magic: u32,
     pub r#type: MessageType,
@@ -343,15 +343,22 @@ impl Message {
 
     pub fn compile(&self, magic: u32) -> Vec<u8> {
         if let MessagePayload::Request(ref request) = self.payload {
-            let payload = request.compile();
-            let len = payload.len() as u32;
-            let mut writer = Vec::<u8>::new();
-            magic.enc(&mut writer);
-            self.r#type.enc(&mut writer);
-            len.enc(&mut writer);
-            sha256d::Hash::hash(&payload).enc(&mut writer);
-            writer.copy_from_slice(&payload);
-            writer
+            // [self appendUInt32:chain.magicNumber];
+            // [self appendNullPaddedString:type length:12];
+            // [self appendUInt32:(uint32_t)message.length];
+            // [self appendBytes:message.SHA256_2.u32 length:4];
+            // [self appendBytes:message.bytes length:message.length];
+            // let payload = request.compile();
+            // let len = payload.len() as u32;
+            // let mut writer = Vec::<u8>::new();
+            // magic.enc(&mut writer);
+            // self.r#type.enc(&mut writer);
+            // len.enc(&mut writer);
+            // sha256d::Hash::hash(&payload).enc(&mut writer);
+            // writer.extend_from_slice(&payload);
+            // writer.copy_from_slice(&payload);
+            // writer
+            return request.compile();
         } else {
             panic!("Can compile only request with payload")
         }
@@ -394,6 +401,7 @@ impl Message {
         let raw_payload = CheckedData::consensus_decode(&mut finite_reader_ref)?;
         // let mut mem_d = io::Cursor::new(raw_payload);
         let payload = CheckedPayload { message_type: r#type, payload: raw_payload };
+        println!("from_buffer: {:?}", r#type);
         Ok(Direction::Incoming.message_with(r#type, MessagePayload::Checked(payload)))
 
     }
