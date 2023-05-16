@@ -1,13 +1,15 @@
 use std::collections::BTreeMap;
 use std::ptr::null_mut;
+use bls_signatures::G1Element;
 use hashes::hex::FromHex;
 use crate::{models, types};
 use crate::bindings::common::{processor_create_cache, register_processor};
 use crate::bindings::masternode::process_mnlistdiff_from_message;
 use crate::chain::common::{ChainType, DevnetType};
-use crate::crypto::UInt256;
+use crate::crypto::{UInt256, UInt384};
 use crate::ffi::{boxer::boxed, to::ToFFI};
 use crate::lib_tests::tests::{add_insight_lookup_default, assert_diff_result, FFIContext, get_block_height_by_hash_from_context, get_block_hash_by_height_from_context, get_llmq_snapshot_by_block_hash_default, get_merkle_root_by_hash_default, hash_destroy_default, masternode_list_destroy_default, masternode_list_save_in_cache, MerkleBlock, message_from_file, save_llmq_snapshot_in_cache, should_process_diff_with_range_default, snapshot_destroy_default};
+use crate::models::OperatorPublicKey;
 use crate::tests::block_store::init_testnet_store;
 
 unsafe extern "C" fn get_merkle_root_for_chacha(
@@ -263,4 +265,19 @@ fn test_core_19_rc_2_testnet() {
     println!("Result: {:#?}", &result);
     // todo: need add new blocks to the testnet store
     //assert_diff_result(context, result);
+}
+
+#[test]
+fn test_legacy_basic_conversion() {
+    let chain_type = ChainType::TestNet;
+    let block_height = 530000;
+    let legacy_key = OperatorPublicKey {
+        data: UInt384::from_hex("16ca29d03ef4897a22fe467bb58c52448c63bb29534502305e8ff142ac03907fae0851ff2528e4878ef51bfa3d5a1f22").unwrap(),
+        version: 0
+    };
+    let basic_key = OperatorPublicKey {
+        data: UInt384::from_hex("96ca29d03ef4897a22fe467bb58c52448c63bb29534502305e8ff142ac03907fae0851ff2528e4878ef51bfa3d5a1f22").unwrap(),
+        version: 2,
+    };
+    assert_eq!(UInt384(*G1Element::from_bytes(&basic_key.data.0).unwrap().serialize_legacy()), legacy_key.data);
 }

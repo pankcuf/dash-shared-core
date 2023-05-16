@@ -303,6 +303,7 @@ impl IHaveChainSettings for DevnetType {
             DevnetType::Chacha => "8862eca4bdb5255b51dc72903b8a842f6ffe7356bc40c7b7a7437b8e4556e220",
             DevnetType::Mojito => "739507391fa00da48a2ecae5df3b5e40b4432243603db6dafe33ca6b4966e357",
             DevnetType::WhiteRussian => "9163d6958065ca5e73c36f0f2474ce618846260c215f5cba633bd0003585cb35",
+            DevnetType::Screwdriver => "4ac35ceb629e529b2a0eb2e2676983d4b11ebddaff5bd00cae7156a02b521e6f",
             _ => "00000bafbc94add76cb75e2ec92894837288a481e5c005f6563d91623bf8bc2c",
         }).unwrap().reverse()
     }
@@ -458,6 +459,14 @@ impl ChainType {
             ChainType::MainNet => 20,
             ChainType::TestNet => 40,
             ChainType::DevNet(_) => 4
+        }
+    }
+
+    pub fn core19_activation_height(&self) -> u32 {
+        match self {
+            ChainType::MainNet => 1870848,
+            ChainType::TestNet => 850100,
+            ChainType::DevNet(_) => 0
         }
     }
 

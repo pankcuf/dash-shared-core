@@ -307,7 +307,6 @@ pub unsafe extern "C" fn forget_private_key(key: *mut OpaqueKey) {
 // _extendedPublicKey = [parentDerivationPath.extendedPublicKey publicDeriveTo256BitDerivationPath:self derivationPathOffset:parentDerivationPath.length];
 /// # Safety
 #[no_mangle]
-// pub unsafe extern "C" fn key_public_derive_to_256bit(key: *mut OpaqueKey, derivation_path: *const DerivationPathData, offset: usize) -> *mut OpaqueKey {
 pub unsafe extern "C" fn key_public_derive_to_256bit(key: *mut OpaqueKey, derivation_indexes: *const u8, derivation_hardened: *const bool, derivation_len: usize, offset: usize) -> *mut OpaqueKey {
     let path = IndexPath::from((derivation_indexes, derivation_hardened, derivation_len));
     match *key {
@@ -524,6 +523,16 @@ pub unsafe extern "C" fn key_bls_public_key(key: *mut BLSKey) -> ByteArray {
 #[no_mangle]
 pub unsafe extern "C" fn key_bls_chaincode(key: *mut BLSKey) -> ByteArray {
     (&*key).chaincode().into()
+}
+
+/// # Safety
+#[no_mangle]
+pub unsafe extern "C" fn key_bls_serialize(key: *mut BLSKey, legacy: bool) -> ByteArray {
+    (&*key).bls_public_key()
+        .map(|key| UInt384(*if legacy { key.serialize_legacy() } else { key.serialize() }))
+        .ok()
+        .into()
+
 }
 
 /// # Safety

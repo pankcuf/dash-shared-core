@@ -1,9 +1,7 @@
 import requests
 import json
 import argparse
-
-def get_api_base(c):
-    return 'insight.dashevo.org' if c == 'mainnet' else 'insight.testnet.networks.dash.org:3002'
+from chain import Chain
 
 parser = argparse.ArgumentParser(description='Script so useful.')
 parser.add_argument("--root", type=int, default=0)
@@ -14,13 +12,11 @@ args = parser.parse_args()
 
 root = args.root
 head = args.head
-chain = args.chain
-# blocks = []
-base = get_api_base(chain)
+chain = Chain.from_string(args.chain)
 
 blocks = []
 for i in range(root, head):
-    r = requests.get(f'https://{base}/insight-api-dash/block/{i}')
+    r = requests.get(f'https://{chain.api_base}/insight-api-dash/block/{i}')
     block = r.json()
     # print('{}'.format(i))
     block_hash = block["hash"]
@@ -34,5 +30,5 @@ for i in range(root, head):
     blocks.append(block)
 
 # print('{}'.format(blocks))
-with open('scripts/testnet.json', 'w', encoding='utf-8') as f:
+with open('scripts/{}.json'.format(chain.name), 'w', encoding='utf-8') as f:
     json.dump(blocks, f, ensure_ascii=False, indent=4)

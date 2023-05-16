@@ -391,6 +391,17 @@ pub mod tests {
         assert!(result.has_valid_quorums, "has invalid llmq height {}", bh);
     }
 
+    pub fn assert_qrinfo_result(context: &mut FFIContext, result: types::QRInfoResult) {
+        if result.extra_share {
+            assert_diff_result(context, unsafe { *result.result_at_h_4c });
+        }
+        assert_diff_result(context, unsafe { *result.result_at_h_3c });
+        assert_diff_result(context, unsafe { *result.result_at_h_2c });
+        assert_diff_result(context, unsafe { *result.result_at_h_c });
+        assert_diff_result(context, unsafe { *result.result_at_h });
+        assert_diff_result(context, unsafe { *result.result_at_tip });
+    }
+
     pub unsafe extern "C" fn get_block_height_by_hash_from_context(
         block_hash: *mut [u8; 32],
         context: *const std::ffi::c_void,

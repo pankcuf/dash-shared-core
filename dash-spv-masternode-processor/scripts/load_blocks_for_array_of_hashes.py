@@ -1,6 +1,7 @@
 import requests
 import json
 import argparse
+from chain import Chain
 
 parser = argparse.ArgumentParser(description='Script so useful.')
 parser.add_argument("--hashes", type=str, default='')
@@ -10,17 +11,12 @@ args = parser.parse_args()
 
 hashes = args.hashes.split(',')
 
-
-def get_api_base(c):
-    return 'insight.dashevo.org' if c == 'mainnet' else 'insight.testnet.networks.dash.org:3002'
-
-# https://insight.testnet.networks.dash.org:3002/insight/block/00000020ae1548f572b068859c7983880fbb6d259680b4821fedd365ec80b09e
 filename = args.file
-chain = args.chain
+chain = Chain.from_string(args.chain)
+
 blocks = []
-base = get_api_base(chain)
 for i in hashes:
-    r = requests.get(f'https://{base}/insight-api-dash/block/{i}')
+    r = requests.get(f'https://{chain.api_base}/insight-api-dash/block/{i}')
     block = r.json()
     block_hash = block["hash"]
     block_height = block["height"]
