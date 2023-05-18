@@ -254,9 +254,6 @@ impl MasternodeProcessor {
             added_quorums,
             needed_masternode_lists,
         };
-        info!("••• RESULT ({}{}{}) •••", u8::from(should_process_quorums), u8::from(is_dip_0024), u8::from(is_rotated_quorums_presented));
-        info!("{:?}", result);
-        info!("••••••••••••••");
         result
     }
 
