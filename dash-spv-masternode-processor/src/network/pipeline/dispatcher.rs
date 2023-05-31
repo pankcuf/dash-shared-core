@@ -8,8 +8,8 @@ pub struct PipelineDispatcher {
 }
 
 impl PipelineDispatcher {
-    pub fn new(chain_type: ChainType, receiver: P2PNotificationReceiver) -> PipelineDispatcher {
-        let dispatchers = Arc::new(Mutex::new(Vec::new()));
+    pub fn new(chain_type: ChainType, receiver: P2PNotificationReceiver, pipelines: Vec<P2PNotificationDispatcher>) -> PipelineDispatcher {
+        let dispatchers = Arc::new(Mutex::new(pipelines));
         let cloned_dispatchers = dispatchers.clone();
         ThreadName::PipelineDispatcher
             .thread(chain_type)
@@ -21,6 +21,11 @@ impl PipelineDispatcher {
     pub fn add_pipeline(&mut self, dispatcher: P2PNotificationDispatcher) {
         let mut locked_dispatchers = self.dispatchers.lock().unwrap();
         locked_dispatchers.push(dispatcher);
+    }
+
+    pub fn add_pipelines(&mut self, dispatchers: Vec<P2PNotificationDispatcher>) {
+        let mut locked_dispatchers = self.dispatchers.lock().unwrap();
+        locked_dispatchers.extend(dispatchers);
     }
 
     fn incoming_messages_loop(receiver: P2PNotificationReceiver, dispatchers: Arc<Mutex<Vec<P2PNotificationDispatcher>>>) {
