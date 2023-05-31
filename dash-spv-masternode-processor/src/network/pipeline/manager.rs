@@ -28,11 +28,10 @@ impl PipelineManager {
         let (notification_sender, notification_receiver) = mpsc::sync_channel(BACK_PRESSURE);
         let (p2p, control_dispatcher, addresses) = P2P::new(notification_sender, BACK_PRESSURE, self.chain_type, self.chain.clone());
         let timeout = Arc::new(Mutex::new(Timeout::new(control_dispatcher.clone())));
-
-        let mut pipeline_dispatcher = PipelineDispatcher::new(self.chain_type, notification_receiver);
-        pipeline_dispatcher.add_pipeline(Headers::new(self.chain.clone(), self.chain_type, control_dispatcher.clone(), timeout.clone()));
-        pipeline_dispatcher.add_pipeline(Ping::new(self.chain_type, control_dispatcher.clone(), timeout.clone()));
-
+        let pipeline_dispatcher = PipelineDispatcher::new(self.chain_type, notification_receiver, vec![
+            Headers::new(self.chain.clone(), self.chain_type, control_dispatcher.clone(), timeout.clone()),
+            Ping::new(self.chain_type, control_dispatcher.clone(), timeout.clone())
+        ]);
         let executor = ThreadName::P2PConnect.pool(self.chain_type, 3)
             .expect("can not start futures thread pool");
 

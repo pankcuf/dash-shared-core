@@ -71,7 +71,7 @@ impl Pipeline for Headers {
 impl Headers {
     pub fn new(chain: Shared<Chain>, chain_type: ChainType, dispatcher: P2PControlDispatcher, timeout: SharedTimeout<ExpectedReply>) -> P2PNotificationDispatcher {
         let back_pressure = dispatcher.back_pressure;
-        let pipeline = Self { chain, dispatcher: dispatcher, timeout };
+        let pipeline = Self { chain, dispatcher, timeout };
         pipeline.setup(back_pressure, chain_type)
     }
 
