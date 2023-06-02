@@ -7,6 +7,7 @@ pub mod ecdsa;
 pub mod endian;
 pub mod error;
 pub mod file;
+#[cfg(feature = "generate-dashj-tests")]
 pub mod java;
 pub mod key;
 pub mod logging;
@@ -27,7 +28,11 @@ pub use self::address::address::is_valid_dash_private_key;
 pub use self::address::address::shapeshift_outbound_for_script;
 pub use self::address::address::shapeshift_outbound_force_script;
 pub use self::address::address::with_script_sig;
-
 pub use self::error::Error;
 pub use self::shared::Shared;
 pub use self::time::TimeUtil;
+
+#[cfg(feature = "generate-dashj-tests")]
+pub use self::file::create_file;
+#[cfg(feature = "generate-dashj-tests")]
+pub use self::file::save_json_file;

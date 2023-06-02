@@ -20,6 +20,7 @@ pub struct MNListDiffResult {
     pub modified_masternodes: BTreeMap<UInt256, models::MasternodeEntry>,
     pub added_quorums: BTreeMap<common::LLMQType, BTreeMap<UInt256, models::LLMQEntry>>,
     pub needed_masternode_lists: Vec<UInt256>,
+    pub quorums_cl_sigs: Vec<models::QuorumsCLSigsObject>,
 }
 
 impl std::fmt::Debug for MNListDiffResult {
@@ -64,6 +65,7 @@ impl Default for MNListDiffResult {
             modified_masternodes: Default::default(),
             added_quorums: Default::default(),
             needed_masternode_lists: vec![],
+            quorums_cl_sigs: vec![],
         }
     }
 }
@@ -99,6 +101,12 @@ impl MNListDiffResult {
                     .collect(),
             ),
             needed_masternode_lists_count: self.needed_masternode_lists.len(),
+            quorums_cl_sigs_count: self.quorums_cl_sigs.len(),
+            quorums_cl_sigs: boxed_vec(
+                self.quorums_cl_sigs
+                    .iter()
+                    .map(|h| boxed(h.encode()))
+                    .collect())
         }
     }
 }

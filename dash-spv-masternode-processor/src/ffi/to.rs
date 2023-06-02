@@ -102,7 +102,12 @@ impl ToFFI for tx::CoinbaseTransaction {
             } else {
                 boxed(self.merkle_root_llmq_list.unwrap().0)
             },
-            locked_amount: self.locked_amount
+            best_cl_height_diff: self.best_cl_height_diff,
+            best_cl_signature: if self.best_cl_signature.is_none() {
+                null_mut()
+            } else {
+                boxed(self.best_cl_signature.unwrap().0)
+            }
         }
     }
 }
@@ -311,6 +316,18 @@ impl ToFFI for common::Block {
         Self::Item {
             height: self.height,
             hash: boxed(self.hash.0),
+        }
+    }
+}
+
+impl ToFFI for models::QuorumsCLSigsObject {
+    type Item = types::QuorumsCLSigsObject;
+
+    fn encode(&self) -> Self::Item {
+        Self::Item {
+            signature: boxed(self.signature.0),
+            index_set_count: self.index_set.len(),
+            index_set: boxed_vec(self.index_set.clone()),
         }
     }
 }

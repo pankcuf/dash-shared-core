@@ -98,6 +98,20 @@ pub unsafe fn unbox_masternode_list(list: *mut types::MasternodeList) {
         masternode_list.llmq_type_maps_count,
     ));
 }
+/// # Safety
+pub unsafe fn unbox_quorums_cl_sigs_object(x: *mut types::QuorumsCLSigsObject) {
+    let result = unbox_any(x);
+    unbox_any(result.signature);
+    let index_set = unbox_vec_ptr(result.index_set, result.index_set_count);
+    drop(index_set);
+
+}
+/// # Safety
+pub unsafe fn unbox_quorums_cl_sigs_vec(vec: Vec<*mut types::QuorumsCLSigsObject>) {
+    for &x in vec.iter() {
+        unbox_quorums_cl_sigs_object(x);
+    }
+}
 
 /// # Safety
 pub unsafe fn unbox_masternode_vec(vec: Vec<*mut types::MasternodeEntry>) {
@@ -241,6 +255,9 @@ pub unsafe fn unbox_coinbase_tx(result: *mut types::CoinbaseTransaction) {
     if !ctx.merkle_root_llmq_list.is_null() {
         unbox_any(ctx.merkle_root_llmq_list);
     }
+    if !ctx.best_cl_signature.is_null() {
+        unbox_any(ctx.best_cl_signature);
+    }
 }
 
 /// # Safety
@@ -277,6 +294,12 @@ pub unsafe fn unbox_mn_list_diff_result(result: *mut types::MNListDiffResult) {
         unbox_llmq_map_vec(unbox_vec_ptr(
             res.added_llmq_type_maps,
             res.added_llmq_type_maps_count,
+        ));
+    }
+    if !res.quorums_cl_sigs.is_null() {
+        unbox_quorums_cl_sigs_vec(unbox_vec_ptr(
+            res.quorums_cl_sigs,
+            res.quorums_cl_sigs_count,
         ));
     }
 }

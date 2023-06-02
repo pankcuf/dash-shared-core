@@ -392,6 +392,7 @@ pub fn masternode_list_from_genesis_diff<BHL: Fn(UInt256) -> u32 + Copy>(
         added_quorums,
         base_block_height: block_height_lookup(base_block_hash),
         block_height: block_height_lookup(block_hash),
-        version
+        version,
+        quorums_cls_sigs: vec![],
     }
 }

@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'DashSharedCore'
-  s.version          = '0.4.0'
+  s.version          = '0.4.1'
   s.summary          = 'Dash Core SPV written in Rust'
   s.author           = 'Dash'
   s.description      = "C-bindings for Dash Core SPV that can be used in projects for Apple platform"

@@ -1,10 +1,13 @@
 use byte::ctx::{Bytes, Endian};
 use byte::{BytesExt, TryRead, LE};
 use hashes::hex::ToHex;
+#[cfg(feature = "generate-dashj-tests")]
+use serde::{Serialize, Serializer};
+#[cfg(feature = "generate-dashj-tests")]
+use serde::ser::SerializeStruct;
 use crate::common::LLMQSnapshotSkipMode;
 use crate::consensus::encode::VarInt;
-use crate::crypto::byte_util::BytesDecodable;
-use crate::crypto::data_ops::Data;
+use crate::crypto::{byte_util::BytesDecodable, data_ops::Data};
 use crate::impl_bytes_decodable;
 use crate::models::MasternodeEntry;
 
@@ -25,6 +28,20 @@ impl Default for LLMQSnapshot {
             skip_list: vec![],
             skip_list_mode: LLMQSnapshotSkipMode::NoSkipping,
         }
+    }
+}
+
+#[cfg(feature = "generate-dashj-tests")]
+impl Serialize for LLMQSnapshot {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        let mut state = serializer.serialize_struct("LLMQSnapshot", 3)?;
+        let len = self.member_list.len() * 8 - 7;
+        let members = (0..len).map(|i| self.member_is_true_at_index(i as u32)).collect::<Vec<_>>();
+        state.serialize_field("member_list", &members)?;
+        state.serialize_field("skip_list", &self.skip_list)?;
+        state.serialize_field("skip_list_mode", &self.skip_list_mode)?;
+        state.end()
+
     }
 }
 
@@ -54,13 +71,6 @@ impl<'a> TryRead<'a, Endian> for LLMQSnapshot {
             skip_list,
             skip_list_mode,
         };
-        // java::generate_snapshot_from_bytes(&bytes[..*offset]);
-        // println!("snapshot: {:?}", snapshot);
-        // (0..member_list_length).into_iter().for_each(|i| {
-        //     println!("{},", snapshot.member_is_true_at_index(i as u32));
-        // });
-        // println!("read_llmqsnapshot: bytes: {}", bytes[..*offset].to_hex());
-        // println!("read_llmqsnapshot: result: {:?}", snapshot);
         Ok((snapshot, *offset))
     }
 }

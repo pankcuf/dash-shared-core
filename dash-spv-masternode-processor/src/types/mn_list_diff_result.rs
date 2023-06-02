@@ -22,6 +22,8 @@ pub struct MNListDiffResult {
     pub added_llmq_type_maps_count: usize,
     pub needed_masternode_lists: *mut *mut [u8; 32],
     pub needed_masternode_lists_count: usize,
+    pub quorums_cl_sigs: *mut *mut types::QuorumsCLSigsObject,
+    pub quorums_cl_sigs_count: usize,
 }
 impl MNListDiffResult {
     pub fn default_with_error(error: ProcessingError) -> Self {
@@ -49,6 +51,8 @@ impl Default for MNListDiffResult {
             added_llmq_type_maps_count: 0,
             needed_masternode_lists: null_mut(),
             needed_masternode_lists_count: 0,
+            quorums_cl_sigs: null_mut(),
+            quorums_cl_sigs_count: 0,
         }
     }
 }

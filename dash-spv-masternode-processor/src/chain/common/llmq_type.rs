@@ -1,5 +1,7 @@
 use byte::ctx::Endian;
 use byte::{BytesExt, TryRead, TryWrite};
+#[cfg(feature = "generate-dashj-tests")]
+use serde::{Serialize, Serializer};
 use crate::consensus::{Encodable, encode::VarInt};
 use crate::crypto::byte_util::BytesDecodable;
 
@@ -305,6 +307,12 @@ pub enum LLMQType {
     LlmqtypeDevnetPlatform = 107, // 8 members, 4 (50%) threshold, one per hour. Params might differ when -llmqdevnetparams is used
 }
 
+#[cfg(feature = "generate-dashj-tests")]
+impl Serialize for LLMQType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        serializer.serialize_u8(u8::from(*self))
+    }
+}
 
 impl LLMQType {
     pub fn params(&self) -> LLMQParams {

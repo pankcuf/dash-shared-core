@@ -96,7 +96,12 @@ impl FromFFI for types::CoinbaseTransaction {
             } else {
                 Some(UInt256(*self.merkle_root_llmq_list))
             },
-            locked_amount: self.locked_amount
+            best_cl_height_diff: self.best_cl_height_diff,
+            best_cl_signature: if self.best_cl_signature.is_null() {
+                None
+            } else {
+                Some(UInt768(*self.best_cl_signature))
+            }
         }
     }
 }
@@ -294,6 +299,20 @@ impl FromFFI for types::Block {
         Self::Item {
             height: self.height,
             hash: UInt256(*self.hash),
+        }
+    }
+}
+
+impl FromFFI for types::QuorumsCLSigsObject {
+    type Item = models::QuorumsCLSigsObject;
+
+    unsafe fn decode(&self) -> Self::Item {
+        Self::Item {
+            signature: UInt768(*self.signature),
+            index_set: (0..self.index_set_count)
+                .into_iter()
+                .map(|i| *self.index_set.add(i))
+                .collect()
         }
     }
 }

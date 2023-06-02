@@ -1,7 +1,7 @@
 use std::ffi::CString;
 use std::fs::File;
 use std::os::raw::c_char;
-use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TerminalMode, TermLogger, WriteLogger};
+use simplelog::{ColorChoice, CombinedLogger, ConfigBuilder, LevelFilter, TerminalMode, TermLogger, WriteLogger};
 use crate::crypto::byte_util::ConstDecodable;
 use crate::crypto::UInt256;
 use crate::ffi::boxer::boxed;
@@ -31,13 +31,15 @@ pub unsafe extern "C" fn register_rust_logger() {
     println!("Log file create at: {:?}", log_file_path);
     let log_file = File::create(log_file_path)
         .expect("Failed to create log file");
+    let config = ConfigBuilder::new().build();
+    //let config = ConfigBuilder::new().set_time_level(LevelFilter::Off).set_max_level(LevelFilter::Off).build();
     match CombinedLogger::init(
         vec![
-            TermLogger::new(LevelFilter::Error, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
-            TermLogger::new(LevelFilter::Warn, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
-            WriteLogger::new(LevelFilter::Error, Config::default(), log_file.try_clone().unwrap()),
-            WriteLogger::new(LevelFilter::Warn, Config::default(), log_file.try_clone().unwrap()),
-            WriteLogger::new(LevelFilter::Info, Config::default(), log_file.try_clone().unwrap()),
+            TermLogger::new(LevelFilter::Error, config.clone(), TerminalMode::Mixed, ColorChoice::Auto),
+            TermLogger::new(LevelFilter::Warn, config.clone(), TerminalMode::Mixed, ColorChoice::Auto),
+            WriteLogger::new(LevelFilter::Error, config.clone(), log_file.try_clone().unwrap()),
+            WriteLogger::new(LevelFilter::Warn, config.clone(), log_file.try_clone().unwrap()),
+            WriteLogger::new(LevelFilter::Info, config.clone(), log_file.try_clone().unwrap()),
         ]
     ) {
         Ok(()) => println!("Logger initialized"),

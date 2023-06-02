@@ -304,6 +304,7 @@ impl IHaveChainSettings for DevnetType {
             DevnetType::Mojito => "739507391fa00da48a2ecae5df3b5e40b4432243603db6dafe33ca6b4966e357",
             DevnetType::WhiteRussian => "9163d6958065ca5e73c36f0f2474ce618846260c215f5cba633bd0003585cb35",
             DevnetType::Screwdriver => "4ac35ceb629e529b2a0eb2e2676983d4b11ebddaff5bd00cae7156a02b521e6f",
+            DevnetType::Absinthe => "53ab7716f36a92068d7bbfa6475681018788a438e028d8bfdf86bfff4f6b78ab",
             _ => "00000bafbc94add76cb75e2ec92894837288a481e5c005f6563d91623bf8bc2c",
         }).unwrap().reverse()
     }

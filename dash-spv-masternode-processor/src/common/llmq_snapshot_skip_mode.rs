@@ -1,6 +1,9 @@
 use byte::ctx::Endian;
 use byte::{BytesExt, TryRead, LE};
 
+#[cfg(feature = "generate-dashj-tests")]
+use serde::{Serialize, Serializer};
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Hash)]
 pub enum LLMQSnapshotSkipMode {
@@ -19,6 +22,14 @@ pub enum LLMQSnapshotSkipMode {
     // Every node was skipped. The skip list is empty. DKG sessions were not attempted.
     SkipAll = 3,
 }
+
+#[cfg(feature = "generate-dashj-tests")]
+impl Serialize for LLMQSnapshotSkipMode {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        serializer.serialize_u32(u32::from(*self))
+    }
+}
+
 impl From<u32> for LLMQSnapshotSkipMode {
     fn from(orig: u32) -> Self {
         match orig {

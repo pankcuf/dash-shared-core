@@ -1,5 +1,7 @@
 use byte::ctx::Endian;
 use byte::{BytesExt, TryRead, TryWrite};
+#[cfg(feature = "generate-dashj-tests")]
+use serde::{Serialize, Serializer};
 use crate::consensus::Encodable;
 use crate::crypto::byte_util::BytesDecodable;
 
@@ -12,6 +14,14 @@ pub enum LLMQVersion {
     BLSBasicDefault = 3,
     BLSBasicIndexed = 4,
 }
+
+#[cfg(feature = "generate-dashj-tests")]
+impl Serialize for LLMQVersion {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        serializer.serialize_u16(u16::from(*self))
+    }
+}
+
 impl LLMQVersion {
     pub fn use_bls_legacy(&self) -> bool {
         *self == Self::Default || *self == Self::Indexed

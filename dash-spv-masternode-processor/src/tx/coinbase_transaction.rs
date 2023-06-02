@@ -2,7 +2,7 @@ use byte::ctx::Endian;
 use byte::{BytesExt, TryRead};
 use crate::consensus::encode::VarInt;
 use crate::consensus::Encodable;
-use crate::crypto::UInt256;
+use crate::crypto::{UInt256, UInt768};
 use crate::tx::{Transaction, TransactionType::Coinbase};
 
 #[derive(Debug, Clone)]
@@ -12,7 +12,8 @@ pub struct CoinbaseTransaction {
     pub height: u32,
     pub merkle_root_mn_list: UInt256,
     pub merkle_root_llmq_list: Option<UInt256>,
-    pub locked_amount: u64,
+    pub best_cl_height_diff: u32,
+    pub best_cl_signature: Option<UInt768>,
 }
 
 impl<'a> TryRead<'a, Endian> for CoinbaseTransaction {
@@ -29,21 +30,22 @@ impl<'a> TryRead<'a, Endian> for CoinbaseTransaction {
         } else {
             None
         };
-        let locked_amount = if coinbase_transaction_version >= 3 {
-            bytes.read_with::<u64>(offset, byte::LE)?
+        let (best_cl_height_diff, best_cl_signature) = if coinbase_transaction_version >= 3 {
+            (bytes.read_with::<u32>(offset, byte::LE)?,
+            bytes.read_with::<UInt768>(offset, byte::LE).ok())
         } else {
-            u64::MAX
+            (u32::MAX, None)
         };
         base.tx_type = Coinbase;
         base.payload_offset = *offset;
-        assert!((coinbase_transaction_version >= 3 && locked_amount != u64::MAX) || (coinbase_transaction_version < 3 && locked_amount == u64::MAX), "For cbtx with version {} assets locked amount is {}", coinbase_transaction_version, locked_amount);
         let mut tx = Self {
             base,
             coinbase_transaction_version,
             height,
             merkle_root_mn_list,
             merkle_root_llmq_list,
-            locked_amount
+            best_cl_height_diff,
+            best_cl_signature
         };
         tx.base.tx_hash = Some(UInt256::sha256d(tx.to_data()));
         Ok((tx, *offset))
@@ -62,7 +64,10 @@ impl CoinbaseTransaction {
             }
         }
         if self.coinbase_transaction_version >= 3 {
-            self.locked_amount.enc(&mut buffer);
+            self.best_cl_height_diff.enc(&mut buffer);
+            if let Some(sig) = self.best_cl_signature {
+                sig.enc(&mut buffer);
+            }
         }
         buffer
     }

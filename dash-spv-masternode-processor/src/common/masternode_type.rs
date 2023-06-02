@@ -1,5 +1,7 @@
 use byte::ctx::Endian;
 use byte::{BytesExt, TryRead};
+#[cfg(feature = "generate-dashj-tests")]
+use serde::{Serialize, Serializer};
 use crate::crypto::byte_util::BytesDecodable;
 
 #[repr(u16)]
@@ -7,6 +9,13 @@ use crate::crypto::byte_util::BytesDecodable;
 pub enum MasternodeType {
     Regular = 0,
     HighPerformance = 1,
+}
+
+#[cfg(feature = "generate-dashj-tests")]
+impl Serialize for MasternodeType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        serializer.serialize_u16(u16::from(*self))
+    }
 }
 
 impl MasternodeType {

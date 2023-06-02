@@ -8,6 +8,7 @@ use crate::crypto::var_array::VarArray;
 use crate::crypto::UInt256;
 use crate::models::{LLMQEntry, MasternodeEntry};
 use crate::models::masternode_entry::MasternodeReadContext;
+use crate::models::quorums_cl_sigs_object::QuorumsCLSigsObject;
 use crate::tx::CoinbaseTransaction;
 
 #[derive(Clone)]
@@ -28,6 +29,9 @@ pub struct MNListDiff {
     // 1: all pubKeyOperator of all CSimplifiedMNListEntry are serialised using legacy BLS scheme
     // 2: all pubKeyOperator of all CSimplifiedMNListEntry are serialised using basic BLS scheme
     pub version: u16,
+
+    // protocol_version > 20227
+    pub quorums_cls_sigs: Vec<QuorumsCLSigsObject>,
 }
 
 impl std::fmt::Debug for MNListDiff {
@@ -116,6 +120,15 @@ impl MNListDiff {
                 }
             }
         }
+        let mut quorums_cls_sigs = Vec::new();
+        if protocol_version > 70227 { // Core v0.20
+            let quorums_cl_sigs_count = VarInt::from_bytes(message, offset)?.0;
+            for _i in 0..quorums_cl_sigs_count {
+                let sig = QuorumsCLSigsObject::from_bytes(message, offset)?;
+                quorums_cls_sigs.push(sig);
+            }
+        }
+
         Some(Self {
             base_block_hash,
             block_hash,
@@ -129,7 +142,8 @@ impl MNListDiff {
             added_quorums,
             base_block_height,
             block_height,
-            version
+            version,
+            quorums_cls_sigs
         })
     }
 }

@@ -1,5 +1,9 @@
 use byte::{BytesExt, TryRead};
 use std::collections::BTreeMap;
+#[cfg(feature = "generate-dashj-tests")]
+use serde::{Serialize, Serializer};
+#[cfg(feature = "generate-dashj-tests")]
+use serde::ser::SerializeStruct;
 use crate::common::{Block, MasternodeType, SocketAddress};
 use crate::consensus::Encodable;
 use crate::crypto::{UInt160, UInt256, byte_util::Zeroable};
@@ -30,6 +34,27 @@ pub struct MasternodeEntry {
     pub platform_node_id: UInt160,
     pub entry_hash: UInt256,
 }
+
+#[cfg(feature = "generate-dashj-tests")]
+impl Serialize for MasternodeEntry {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> where S: Serializer {
+        let mut state = serializer.serialize_struct("MasternodeEntry", 10)?;
+        state.serialize_field("provider_registration_transaction_hash", &self.provider_registration_transaction_hash)?;
+        state.serialize_field("confirmed_hash", &self.confirmed_hash)?;
+        state.serialize_field("ip_address", &self.socket_address.ip_address)?;
+        state.serialize_field("port", &self.socket_address.port)?;
+        state.serialize_field("operator_public_key", &self.operator_public_key.data)?;
+        state.serialize_field("key_id_voting", &self.key_id_voting)?;
+        state.serialize_field("is_valid", &self.is_valid)?;
+        state.serialize_field("mn_type", &self.mn_type)?;
+        state.serialize_field("platform_http_port", &self.platform_http_port)?;
+        state.serialize_field("platform_node_id", &self.platform_node_id)?;
+        state.serialize_field("version", &self.operator_public_key.version)?;
+        state.end()
+
+    }
+}
+
 // Define a wrapper struct for the BTreeMap.
 pub struct CustomDebugBTreeMap<K, V>(pub BTreeMap<K, V>);
 impl<K: std::fmt::Debug, V: std::fmt::Debug> std::fmt::Debug for CustomDebugBTreeMap<K, V> {

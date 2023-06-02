@@ -2,7 +2,7 @@ use byte::ctx::Endian;
 use byte::{BytesExt, TryRead, LE};
 use std::ptr::null_mut;
 use crate::consensus;
-use crate::crypto::UInt256;
+use crate::crypto::{UInt256, UInt768};
 use crate::ffi::boxer::boxed;
 use crate::types::transaction::Transaction;
 
@@ -14,7 +14,8 @@ pub struct CoinbaseTransaction {
     pub height: u32,
     pub merkle_root_mn_list: *mut [u8; 32],
     pub merkle_root_llmq_list: *mut [u8; 32],
-    pub locked_amount: u64,
+    pub best_cl_height_diff: u32,
+    pub best_cl_signature: *mut [u8; 96],
 }
 impl<'a> TryRead<'a, Endian> for CoinbaseTransaction {
     fn try_read(bytes: &'a [u8], _endian: Endian) -> byte::Result<(Self, usize)> {
@@ -30,11 +31,13 @@ impl<'a> TryRead<'a, Endian> for CoinbaseTransaction {
         } else {
             null_mut()
         };
-        let locked_amount = if coinbase_transaction_version >= 3 {
-            bytes.read_with::<u64>(offset, LE)?
+        let (best_cl_height_diff, best_cl_signature) = if coinbase_transaction_version >= 3 {
+            (bytes.read_with::<u32>(offset, byte::LE)?,
+             boxed(bytes.read_with::<UInt768>(offset, byte::LE)?.0))
         } else {
-            u64::MAX
+            (u32::MAX, null_mut())
         };
+
         Ok((
             Self {
                 base,
@@ -42,7 +45,8 @@ impl<'a> TryRead<'a, Endian> for CoinbaseTransaction {
                 height,
                 merkle_root_mn_list,
                 merkle_root_llmq_list,
-                locked_amount
+                best_cl_height_diff,
+                best_cl_signature
             },
             *offset,
         ))

@@ -3,6 +3,8 @@ use std::{io::Write, mem, net::{IpAddr, Ipv4Addr}, slice};
 use ed25519_dalek::VerifyingKey;
 use hashes::{Hash, hash160, HashEngine, Hmac, HmacEngine, ripemd160, sha1, sha256, sha256d, sha512};
 use secp256k1::rand::{Rng, thread_rng};
+#[cfg(feature = "generate-dashj-tests")]
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use crate::chain::params::{BIP32_SEED_KEY, ED25519_SEED_KEY};
 use crate::consensus::{Decodable, Encodable, ReadExt, WriteExt};
 use crate::ffi;
@@ -187,6 +189,26 @@ macro_rules! define_try_read_to_big_uint {
     }
 }
 
+#[cfg(feature = "generate-dashj-tests")]
+#[macro_export]
+macro_rules! define_serde_big_uint {
+    ($uint_type: ident) => {
+        impl Serialize for $uint_type {
+            fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> where S: Serializer {
+                let str = self.0.to_hex();
+                serializer.serialize_str(&str)
+            }
+        }
+
+        impl<'de> Deserialize<'de> for $uint_type {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error> where D: Deserializer<'de> {
+                String::deserialize(deserializer)
+                    .map(|s| $uint_type::from_hex(s.as_str()).unwrap())
+            }
+        }
+    }
+}
+
 #[macro_export]
 macro_rules! define_try_write_from_big_uint {
     ($uint_type: ident) => {
@@ -208,6 +230,8 @@ macro_rules! define_bytes_to_big_uint {
         impl_decodable!($uint_type, $byte_len);
         define_try_from_bytes!($uint_type);
         impl_ffi_bytearray!($uint_type);
+        #[cfg(feature = "generate-dashj-tests")]
+        define_serde_big_uint!($uint_type);
 
         impl std::default::Default for $uint_type {
             fn default() -> Self {

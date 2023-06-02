@@ -11,7 +11,7 @@ use crate::chain::network::message::message::{MessageType, Payload};
 use crate::chain::network::net_address::NetAddress;
 use crate::chain::network::peer::{ENABLED_SERVICES, LOCAL_HOST};
 use crate::crypto::UTXO;
-use crate::util::time::TimeUtil;
+use crate::util::TimeUtil;
 
 // pub trait IRequest {
 //     fn r#type(&self) -> MessageType;

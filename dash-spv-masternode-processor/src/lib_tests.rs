@@ -389,9 +389,14 @@ pub mod tests {
         assert!(result.has_valid_mn_list_root, "invalid mnl root {}", bh);
         assert!(result.has_valid_llmq_list_root, "invalid llmq root {}", bh);
         assert!(result.has_valid_quorums, "has invalid llmq height {}", bh);
+        println!("Diff is ok at {}", bh);
     }
 
     pub fn assert_qrinfo_result(context: &mut FFIContext, result: types::QRInfoResult) {
+        if result.mn_list_diff_list_count > 0 {
+            let diff_result = unsafe { **result.mn_list_diff_list };
+            assert_diff_result(context, diff_result);
+        }
         if result.extra_share {
             assert_diff_result(context, unsafe { *result.result_at_h_4c });
         }

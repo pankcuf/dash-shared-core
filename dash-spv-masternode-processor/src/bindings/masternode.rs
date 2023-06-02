@@ -111,6 +111,38 @@ pub unsafe extern "C" fn process_qrinfo_from_message(
             snapshot_at_h_4c.clone().unwrap(),
         );
     }
+
+    let last_quorum_per_index_count = unwrap_or_qr_result_failure!(read_var_int(offset)).0 as usize;
+    let mut last_quorum_per_index_vec: Vec<*mut types::LLMQEntry> =
+        Vec::with_capacity(last_quorum_per_index_count);
+    for _i in 0..last_quorum_per_index_count {
+        let quorum = unwrap_or_qr_result_failure!(models::LLMQEntry::from_bytes(message, offset));
+        last_quorum_per_index_vec.push(boxed(quorum.encode()));
+    }
+    let quorum_snapshot_list_count = unwrap_or_qr_result_failure!(read_var_int(offset)).0 as usize;
+    let mut quorum_snapshot_list_vec: Vec<*mut types::LLMQSnapshot> =
+        Vec::with_capacity(quorum_snapshot_list_count);
+    let mut snapshots: Vec<models::LLMQSnapshot> = Vec::with_capacity(quorum_snapshot_list_count);
+    for _i in 0..quorum_snapshot_list_count {
+        let snapshot = unwrap_or_qr_result_failure!(read_snapshot(offset));
+        snapshots.push(snapshot);
+    }
+    let mn_list_diff_list_count = unwrap_or_qr_result_failure!(read_var_int(offset)).0 as usize;
+    let mut mn_list_diff_list_vec: Vec<*mut types::MNListDiffResult> =
+        Vec::with_capacity(mn_list_diff_list_count);
+    assert_eq!(
+        quorum_snapshot_list_count, mn_list_diff_list_count,
+        "'quorum_snapshot_list_count' must be equal 'mn_list_diff_list_count'"
+    );
+    for i in 0..mn_list_diff_list_count {
+        let list_diff = unwrap_or_qr_result_failure!(read_list_diff(offset));
+        let block_hash = list_diff.block_hash;
+        mn_list_diff_list_vec.push(get_list_diff_result(list_diff, false));
+        let snapshot = snapshots.get(i).unwrap();
+        quorum_snapshot_list_vec.push(boxed(snapshot.encode()));
+        processor.save_snapshot(block_hash, snapshot.clone());
+    }
+
     let result_at_h_4c = if extra_share {
         get_list_diff_result(diff_h_4c.unwrap(), false)
     } else {
@@ -121,37 +153,6 @@ pub unsafe extern "C" fn process_qrinfo_from_message(
     let result_at_h_c = get_list_diff_result(diff_h_c, false);
     let result_at_h = get_list_diff_result(diff_h, true);
     let result_at_tip = get_list_diff_result(diff_tip, false);
-    let last_quorum_per_index_count = 0; //unwrap_or_qr_result_failure!(read_var_int(offset)).0 as usize;
-    let mut last_quorum_per_index_vec: Vec<*mut types::LLMQEntry> =
-        Vec::with_capacity(last_quorum_per_index_count);
-    for _i in 0..last_quorum_per_index_count {
-        last_quorum_per_index_vec.push(boxed(
-            unwrap_or_qr_result_failure!(models::LLMQEntry::from_bytes(message, offset)).encode(),
-        ));
-    }
-    let quorum_snapshot_list_count = 0;
-    let mut quorum_snapshot_list_vec: Vec<*mut types::LLMQSnapshot> =
-        Vec::with_capacity(quorum_snapshot_list_count);
-    let mut snapshots: Vec<models::LLMQSnapshot> = Vec::with_capacity(quorum_snapshot_list_count);
-    for _i in 0..quorum_snapshot_list_count {
-        let snapshot = unwrap_or_qr_result_failure!(read_snapshot(offset));
-        snapshots.push(snapshot);
-    }
-    let mn_list_diff_list_count = 0;
-    let mut mn_list_diff_list_vec: Vec<*mut types::MNListDiffResult> =
-        Vec::with_capacity(mn_list_diff_list_count);
-    assert_eq!(
-        quorum_snapshot_list_count, mn_list_diff_list_count,
-        "'quorum_snapshot_list_count' must be equal 'mn_list_diff_list_count'"
-    );
-    for i in 0..mn_list_diff_list_count {
-        let list_diff = unwrap_or_qr_result_failure!(read_list_diff(offset));
-        let block_hash = list_diff.block_hash;
-        mn_list_diff_list_vec.push(get_list_diff_result(list_diff, true));
-        let snapshot = snapshots.get(i).unwrap();
-        quorum_snapshot_list_vec.push(boxed(snapshot.encode()));
-        processor.save_snapshot(block_hash, snapshot.clone());
-    }
     let result = types::QRInfoResult {
         error_status: ProcessingError::None,
         result_at_tip,
@@ -176,6 +177,9 @@ pub unsafe extern "C" fn process_qrinfo_from_message(
         mn_list_diff_list: boxed_vec(mn_list_diff_list_vec),
         mn_list_diff_list_count,
     };
+
+    #[cfg(feature = "generate-dashj-tests")]
+    crate::util::java::generate_qr_state_test_file_json(chain_type, result);
     println!("process_qrinfo_from_message <- {:?} ms", instant.elapsed().as_millis());
     boxed(result)
 }

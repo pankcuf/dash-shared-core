@@ -131,6 +131,8 @@ impl MasternodeProcessor {
         cache: &mut MasternodeProcessorCache,
     ) -> types::MNListDiffResult {
         let base_block_hash = list_diff.base_block_hash;
+        //println!("get base list: find_masternode_list for {}: {}", list_diff.base_block_height, base_block_hash);
+
         let base_list = self.find_masternode_list(
             base_block_hash,
             &cache.mn_lists,
@@ -147,6 +149,7 @@ impl MasternodeProcessor {
         is_rotated_quorums_presented: bool,
         cache: &mut MasternodeProcessorCache,
     ) -> MNListDiffResult {
+        //println!("get base list: find_masternode_list for {}: {}", list_diff.base_block_height, list_diff.base_block_hash);
         let base_list = self.find_masternode_list(
             list_diff.base_block_hash,
             &cache.mn_lists,
@@ -177,6 +180,8 @@ impl MasternodeProcessor {
     ) {
         // It's good to cache lists to use it inside processing session
         // Here we use opaque-like pointer which we initiate on the C-side to sync its lifetime with runtime
+        #[cfg(feature = "generate-dashj-tests")]
+        crate::util::java::save_masternode_list_to_json(&list, self.lookup_block_height_by_hash(block_hash));
         cache.add_masternode_list(block_hash, list);
         // Here we just store it in the C-side ()
         // self.save_masternode_list(block_hash, &masternode_list);
@@ -253,6 +258,7 @@ impl MasternodeProcessor {
             modified_masternodes,
             added_quorums,
             needed_masternode_lists,
+            quorums_cl_sigs: list_diff.quorums_cls_sigs,
         };
         result
     }
@@ -329,13 +335,7 @@ impl MasternodeProcessor {
             for (&llmq_type, llmqs_of_type) in &mut added_quorums {
                 if self.should_process_quorum(llmq_type, is_dip_0024, is_rotated_quorums_presented) {
                     for (&llmq_block_hash, quorum) in llmqs_of_type {
-                        if let Some(models::MasternodeList { masternodes, .. }) = self.find_masternode_list(llmq_block_hash, &cache.mn_lists, &mut cache.needed_masternode_lists) {
-                            let valid = self.validate_quorum(quorum, skip_removed_masternodes, llmq_block_hash, masternodes, cache);
-                            // TMP Testnet Platform LLMQ fail verification
-                            if llmq_type != LLMQType::Llmqtype25_67 {
-                                has_valid_quorums &= valid;
-                            }
-                        }
+                        has_valid_quorums &= self.validate_quorum(quorum, skip_removed_masternodes, llmq_block_hash, cache);
                     }
                 }
             }
@@ -356,7 +356,19 @@ impl MasternodeProcessor {
         (added_quorums, base_quorums, has_valid_quorums)
     }
 
-    pub fn validate_quorum(
+    pub fn validate_quorum(&self, quorum: &mut models::LLMQEntry, skip_removed_masternodes: bool, llmq_block_hash: UInt256, cache: &mut MasternodeProcessorCache) -> bool {
+        //println!("get list for quorum {}: find_masternode_list for", llmq_block_hash);
+        if let Some(models::MasternodeList { masternodes, .. }) = self.find_masternode_list(llmq_block_hash, &cache.mn_lists, &mut cache.needed_masternode_lists) {
+            let valid = self.validate_quorum_with_masternodes(quorum, skip_removed_masternodes, llmq_block_hash, masternodes, cache);
+            // TMP Testnet Platform LLMQ fail verification
+            // if llmq_type != LLMQType::Llmqtype25_67 {
+                return valid;
+            // }
+        }
+        true
+    }
+
+    pub fn validate_quorum_with_masternodes(
         &self,
         quorum: &mut models::LLMQEntry,
         skip_removed_masternodes: bool,
@@ -365,10 +377,6 @@ impl MasternodeProcessor {
         cache: &mut MasternodeProcessorCache,
     ) -> bool {
         let block_height = self.lookup_block_height_by_hash(block_hash);
-        // if quorum.llmq_type == LLMQType::Llmqtype60_75 {
-        //     println!("//////////// validate_quorum {:?}: {}: {} ({}): {:?}", quorum.llmq_type, block_height, block_hash, block_hash.reversed(), quorum);
-        // }
-        // java::generate_masternode_list_from_map(&masternodes);
         let valid_masternodes = if quorum.index.is_some() {
             self.get_rotated_masternodes_for_quorum(
                 quorum.llmq_type,
@@ -390,39 +398,7 @@ impl MasternodeProcessor {
                 quorum.llmq_type == self.chain_type.platform_type() && !quorum.version.use_bls_legacy()
             )
         };
-
-        // info!("••• validate_quorum ({}: {:?}: {:?}) •••", block_height, quorum, valid_masternodes);
-        // TMP Generate test for verification with this data
-        // info!("#[test]");
-        // info!("fn test_{}() {{", thread_rng().gen_range(0..8184));
-        // info!("  let block_height = {};", block_height);
-        // info!("  let mut quorum = {:?};", quorum);
-        // info!("  let valid_masternodes = vec!{:?};", valid_masternodes);
-        // info!("  assert!(quorum.validate(valid_masternodes, block_height));");
-        // info!("}}");
-        // generate_test(|| {
-        //     println!("Context context = new Context(TestNet3Params.get());");
-        //     println!("context.initDash(true, true);");
-        //     println!("NetworkParameters params = context.getParams();");
-        //     println!("params.setBasicBLSSchemeActivationHeight(40000);");
-        //     println!("BLSScheme.setLegacyDefault({});", quorum.version.use_bls_legacy());
-        //     println!("int height = {};", block_height);
-        //     println!("Sha256Hash blockHash = Sha256Hash.wrap(\"{}\");", block_hash);
-        //     println!("Sha256Hash blockHashReversed = Sha256Hash.wrap(\"{}\");", block_hash.reversed());
-        //     println!("StoredBlock storedBlock = new StoredBlock(");
-        //     println!("  new Block(params, 536870912, Sha256Hash.wrap(Sha256Hash.wrap(\"0000010080ade24d4fdde00be3b1c58dac97f62ece74b311286ec126e4310a28\").getReversedBytes()), Sha256Hash.wrap(\"afbf4427b30c57535fd8df5eb8750e7176057d5bcdb907274553aa7dfc4c55ad\"), 1681681442, 0, 678112, new ArrayList<>()),");
-        //     println!("  new BigInteger(Hex.decode(\"00000000000000000000000000000000000000000000000002d68cc84bf201da\")), height);");
-        //     java::generate_final_commitment(&quorum);
-        //     java::generate_masternode_list(&valid_masternodes);
-        //     println!("boolean verified = finalCommitment.verify(storedBlock, nodes, true);");
-        //     println!("assertTrue(verified);");
-        // });
-        // if quorum.llmq_type == LLMQType::Llmqtype60_75 {
-        //     println!("//////////// validate_quorum {} ////////////////", block_height);
-        //     // println!("{:#?}", valid_masternodes);
-        //     println!("{:#?}", valid_masternodes.iter().map(|n| n.provider_registration_transaction_hash.reversed()).collect::<Vec<_>>());
-        // }
-
+        //crate::util::java::generate_final_commitment_test_file(self.chain_type, block_height, &quorum, &valid_masternodes);
         quorum.verify(valid_masternodes, block_height)
     }
 
@@ -832,6 +808,8 @@ impl MasternodeProcessor {
     }
 
     pub fn save_snapshot(&self, block_hash: UInt256, snapshot: models::LLMQSnapshot) -> bool {
+        #[cfg(feature = "generate-dashj-tests")]
+        crate::util::java::save_snapshot_to_json(&snapshot, self.lookup_block_height_by_hash(block_hash));
         unsafe {
             (self.save_llmq_snapshot)(
                 boxed(block_hash.0),
@@ -851,6 +829,7 @@ impl MasternodeProcessor {
 
     pub fn should_process_quorum(&self, llmq_type: LLMQType, is_dip_0024: bool, is_rotated_quorums_presented: bool) -> bool {
         // TODO: what we really wants here for platform quorum type?
+        //is_dip_0024 && llmq_type == LLMQType::Llmqtype60_75
         if self.chain_type.isd_llmq_type() == llmq_type {
             is_dip_0024 && is_rotated_quorums_presented
         } else if is_dip_0024 { /*skip old quorums here for now*/

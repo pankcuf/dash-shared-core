@@ -4,6 +4,7 @@ class Chain(Enum):
     MAINNET = "mainnet", "insight.dashevo.org"
     TESTNET = "testnet", "insight.testnet.networks.dash.org:3002"
     SCREWDRIVER = "screwdriver", "insight.screwdriver.networks.dash.org:3002"
+    ABSINTHE = "absinthe", "insight.absinthe.networks.dash.org:3002"
 
     def __new__(cls, name, api_base):
         obj = object.__new__(cls)
