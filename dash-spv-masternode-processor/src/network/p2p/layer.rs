@@ -301,7 +301,7 @@ impl P2P {
                         }
                         if get_next {
                             if let Ok(message) = locked_peer.try_receive() {
-                                self.state.encode(self.state.pack(message), &mut locked_peer.write_buffer)?;
+                                self.state.encode(message, &mut locked_peer.write_buffer)?;
                             } else {
                                 locked_peer.reregister_read()?;
                                 break;
@@ -399,13 +399,13 @@ impl P2P {
                 } else {
                     if handshake {
                         self.connected(pid, address);
-                        if let Some(w) = self.wakers.lock().unwrap().remove(&pid) {
-                            w.wake();
+                        if let Some(waker) = self.wakers.lock().unwrap().remove(&pid) {
+                            waker.wake();
                         }
                     }
-                    for msg in incoming {
-                        if let Ok(m) = self.state.unpack(msg) {
-                            self.notification_dispatcher.send_incoming(pid, m);
+                    for message in incoming {
+                        if let Ok(response) = self.state.unpack(message) {
+                            self.notification_dispatcher.send_incoming(pid, response);
                         } else {
                             self.disconnect(pid, true);
                         }

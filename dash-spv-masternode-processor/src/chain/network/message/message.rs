@@ -1,7 +1,8 @@
 use std::io;
-use std::io::{Error, Read, Write};
+use std::io::{Error, Write};
 use byte::ctx::{Endian, NULL, Str};
 use byte::{BytesExt, TryRead};
+use hashes::hex::ToHex;
 use crate::chain::common::ChainType;
 use crate::chain::network::message::addr::Addr;
 use crate::chain::network::message::inventory::Inventory;
@@ -9,7 +10,7 @@ use crate::chain::network::message::response::Response;
 use crate::chain::network::message::version::Version;
 use crate::chain::network::Request;
 use crate::chain::tx;
-use crate::consensus::encode;
+use crate::consensus::{encode, ReadExt};
 use crate::consensus::encode::{CheckedData, Decodable, Encodable};
 use crate::manager::peer_manager;
 use crate::network::p2p::buffer::{Buffer, PassThroughBufferReader};
@@ -240,9 +241,36 @@ impl Encodable for MessageType {
 }
 
 impl Decodable for MessageType {
-    fn consensus_decode<D: io::Read>(d: D) -> Result<Self, encode::Error> {
-        String::consensus_decode(d)
-            .map(|s| MessageType::from(s.as_str()))
+    fn consensus_decode<D: io::Read>(mut d: D) -> Result<Self, encode::Error> {
+        // d.read_b
+        let mut ret = vec![0u8; 12];
+        d.read_slice(&mut ret)?;
+        // Ok(ret).expect("TODO: panic message")
+        let pos = ret.iter().position(|&c| c == 0).unwrap_or(ret.len());
+        let str = String::from_utf8_lossy(&ret[..pos]);
+        debug!("MessageType.decode: {}", str);
+        Ok(MessageType::from(str.trim()))
+
+        // Here, you would read into the buffer. I'll just demonstrate with hardcoded values.
+
+        // Find the position of the first null terminator
+
+        // Convert the sub-slice up to the found position to a string
+        // let result = str::from_utf8(&buffer[..pos]).expect("Found invalid UTF-8");
+
+        // String::from_utf8_lossy(&ret[..pos])
+        //     .map_err(|err| err.into())
+        //     .map(|str| {
+        //         debug!("MessageType.decode: {}", str);
+        //         MessageType::from(str.as_str())
+        //     })
+        // match String::from_utf8(ret) {
+        //     Ok(str) => Ok(MessageType::from(str.as_str())),
+        //     Err(err) => encode::Error::ParseFailed(&*err.to_string()),
+        // }
+
+        // String::consensus_decode(d)
+        //     .map(|s| MessageType::from(s.as_str()))
     }
 }
 
@@ -384,7 +412,7 @@ impl Message {
     }
 
     pub fn unpack<'a, T: TryRead<'a, Ctx>, Ctx>(&self, context: Ctx) -> Result<T, peer_manager::Error> {
-        // let data = self.payload.to_data();
+
         // data.read_with::<T>(&mut 0, context)
         //     .map_err(|err| peer_manager::Error::from(err))
         todo!()
@@ -395,14 +423,12 @@ impl Message {
     pub fn from_buffer(buffer: &mut Buffer) -> Result<Message, encode::Error> {
         let reader = PassThroughBufferReader::new(buffer);
         let mut finite_reader = reader.take_max();
-        let mut finite_reader_ref = finite_reader.by_ref();
-        let magic = u32::consensus_decode(&mut finite_reader_ref)?;
-        let r#type = MessageType::consensus_decode(&mut finite_reader_ref)?;
-        let raw_payload = CheckedData::consensus_decode(&mut finite_reader_ref)?;
-        // let mut mem_d = io::Cursor::new(raw_payload);
-        let payload = CheckedPayload { message_type: r#type, payload: raw_payload };
-        println!("from_buffer: {:?}", r#type);
-        Ok(Direction::Incoming.message_with(r#type, MessagePayload::Checked(payload)))
-
+        let magic = u32::consensus_decode(&mut finite_reader)?;
+        let message_type = MessageType::consensus_decode(&mut finite_reader)?;
+        let payload = CheckedData::consensus_decode(&mut finite_reader)?;
+        let checked_payload = CheckedPayload { message_type, payload };
+        println!("from_buffer: {:?} {:?}", checked_payload.message_type, checked_payload.payload.0.to_hex());
+        Ok(Direction::Incoming.message_with(message_type, MessagePayload::Checked(checked_payload)))
     }
+
 }

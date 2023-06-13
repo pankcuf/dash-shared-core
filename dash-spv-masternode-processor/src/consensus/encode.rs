@@ -35,6 +35,7 @@ use std::borrow::Cow;
 
 use std::io::{self, Cursor, Read};
 use std::{rc, sync};
+use std::string::FromUtf8Error;
 use hashes::{Hash, sha256, sha256d};
 use crate::hash_types::{BlockHash, FilterHash, FilterHeader, TxMerkleNode};
 use crate::hashes::hex::ToHex;
@@ -53,6 +54,7 @@ pub enum Error {
     Io(io::Error),
     /// PSBT-related error
     Psbt(psbt::Error),
+    Utf8(FromUtf8Error),
     /// Network magic was not expected
     UnexpectedNetworkMagic {
         /// The expected network magic
@@ -89,17 +91,17 @@ impl fmt::Display for Error {
         match *self {
             Error::Io(ref e) => write!(f, "I/O error: {}", e),
             Error::Psbt(ref e) => write!(f, "PSBT error: {}", e),
-            Error::UnexpectedNetworkMagic { expected: ref e, actual: ref a } => write!(f,
-                                                                                       "unexpected network magic: expected {}, actual {}", e, a),
-            Error::OversizedVectorAllocation { requested: ref r, max: ref m } => write!(f,
-                                                                                        "allocation of oversized vector: requested {}, maximum {}", r, m),
-            Error::InvalidChecksum { expected: ref e, actual: ref a } => write!(f,
-                                                                                "invalid checksum: expected {}, actual {}", e.to_hex(), a.to_hex()),
+            Error::UnexpectedNetworkMagic { expected: ref e, actual: ref a } =>
+                write!(f, "unexpected network magic: expected {}, actual {}", e, a),
+            Error::OversizedVectorAllocation { requested: ref r, max: ref m } =>
+                write!(f, "allocation of oversized vector: requested {}, maximum {}", r, m),
+            Error::InvalidChecksum { expected: ref e, actual: ref a } =>
+                write!(f, "invalid checksum: expected {}, actual {}", e.to_hex(), a.to_hex()),
             Error::NonMinimalVarInt => write!(f, "non-minimal varint"),
             Error::UnknownNetworkMagic(ref m) => write!(f, "unknown network magic: {}", m),
             Error::ParseFailed(ref e) => write!(f, "parse failed: {}", e),
-            Error::UnsupportedSegwitFlag(ref swflag) => write!(f,
-                                                               "unsupported segwit version: {}", swflag),
+            Error::UnsupportedSegwitFlag(ref swflag) => write!(f, "unsupported segwit version: {}", swflag),
+            Error::Utf8(ref err) => write!(f, "{}", err.to_string())
         }
     }
 }
@@ -111,6 +113,7 @@ impl ::std::error::Error for Error {
         match *self {
             Error::Io(ref e) => Some(e),
             Error::Psbt(ref e) => Some(e),
+            Error::Utf8(ref e) => Some(e),
             Error::UnexpectedNetworkMagic { .. }
             | Error::OversizedVectorAllocation { .. }
             | Error::InvalidChecksum { .. }
@@ -133,6 +136,13 @@ impl From<io::Error> for Error {
 impl From<psbt::Error> for Error {
     fn from(e: psbt::Error) -> Error {
         Error::Psbt(e)
+    }
+}
+
+#[doc(hidden)]
+impl From<FromUtf8Error> for Error {
+    fn from(e: FromUtf8Error) -> Error {
+        Error::Utf8(e)
     }
 }
 
@@ -677,22 +687,16 @@ impl Encodable for CheckedData {
 impl Decodable for CheckedData {
     #[inline]
     fn consensus_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-        let len = u32::consensus_decode(&mut d)?;
-        if len > MAX_VEC_SIZE as u32 {
-            return Err(self::Error::OversizedVectorAllocation {
-                requested: len as usize,
-                max: MAX_VEC_SIZE
-            });
+        let requested = u32::consensus_decode(&mut d)? as usize;
+        if requested > MAX_VEC_SIZE {
+            return Err(Error::OversizedVectorAllocation { requested, max: MAX_VEC_SIZE });
         }
-        let checksum = <[u8; 4]>::consensus_decode(&mut d)?;
-        let mut ret = vec![0u8; len as usize];
+        let actual = <[u8; 4]>::consensus_decode(&mut d)?;
+        let mut ret = vec![0u8; requested];
         d.read_slice(&mut ret)?;
-        let expected_checksum = sha2_checksum(&ret);
-        if expected_checksum != checksum {
-            Err(self::Error::InvalidChecksum {
-                expected: expected_checksum,
-                actual: checksum,
-            })
+        let expected = sha2_checksum(&ret);
+        if expected != actual {
+            Err(Error::InvalidChecksum { expected, actual })
         } else {
             Ok(CheckedData(ret))
         }
