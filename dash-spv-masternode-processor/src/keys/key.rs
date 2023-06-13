@@ -139,7 +139,7 @@ impl KeyKind {
         }
     }
 
-    pub(crate) fn key_with_seed_data(&self, seed: &[u8]) -> Option<Key> {
+    pub fn key_with_seed_data(&self, seed: &[u8]) -> Option<Key> {
         match self {
             KeyKind::ECDSA => ECDSAKey::init_with_seed_data(seed).map(Key::ECDSA),
             KeyKind::ED25519 => ED25519Key::init_with_seed_data(seed).map(Key::ED25519),

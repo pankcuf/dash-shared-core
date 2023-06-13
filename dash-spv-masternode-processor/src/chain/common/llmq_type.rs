@@ -1,6 +1,10 @@
+use std::io;
+use std::io::{Error, Write};
 use byte::ctx::Endian;
 use byte::{BytesExt, TryRead, TryWrite};
-use crate::consensus::{Encodable, encode::VarInt};
+#[cfg(feature = "generate-dashj-tests")]
+use serde::{Serialize, Serializer};
+use crate::consensus::{Decodable, Encodable, encode, encode::VarInt};
 use crate::crypto::byte_util::BytesDecodable;
 
 #[repr(C)]
@@ -429,5 +433,18 @@ impl<'a> TryWrite<Endian> for LLMQType {
 impl<'a> BytesDecodable<'a, LLMQType> for LLMQType {
     fn from_bytes(bytes: &'a [u8], offset: &mut usize) -> Option<LLMQType> {
         bytes.read_with::<LLMQType>(offset, byte::LE).ok()
+    }
+}
+
+impl Encodable for LLMQType {
+    fn consensus_encode<W: Write>(&self, mut writer: W) -> Result<usize, Error> {
+        let as_u8 = u8::from(*self);
+        as_u8.consensus_encode(&mut writer)
+    }
+}
+
+impl Decodable for LLMQType {
+    fn consensus_decode<D: io::Read>(mut d: D) -> Result<Self, encode::Error> {
+        Ok(LLMQType::from(u8::consensus_decode(&mut d)?))
     }
 }

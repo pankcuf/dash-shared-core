@@ -39,7 +39,7 @@ pub trait PeerState {
     fn pack(&self, message: Message) -> Vec<u8>;
     fn unpack(&self, message: Message) -> Result<Response, peer_manager::Error>;
 
-    fn encode(&self, item: Vec<u8>, dst: &mut Buffer) -> Result<(), io::Error>;
+    fn encode(&self, message: Message, dst: &mut Buffer) -> Result<(), io::Error>;
     fn decode(&self, src: &mut Buffer) -> Result<Option<Message>, io::Error>;
 }
 
@@ -165,14 +165,14 @@ impl PeerState for DashP2PState {
         message.decompile(self)
     }
 
-    fn encode(&self, item: Vec<u8>, dst: &mut Buffer) -> Result<(), io::Error> {
+    fn encode(&self, message: Message, dst: &mut Buffer) -> Result<(), io::Error> {
+        let item = self.pack(message);
         debug!("encode: {}", item.to_hex());
         dst.write_all(&item)
     }
 
     // Decode header & check payload (without parsing)
     fn decode(&self, buffer: &mut Buffer) -> Result<Option<Message>, io::Error> /*where P: Decodable*/ {
-        // println!("decode: {}", item.as_ref().to_hex());
         // println!("decode: {}", buffer.as_ref().to_hex());
         match Message::from_buffer(buffer) {
             Ok(m) => {

@@ -1,8 +1,10 @@
+use std::io;
+use std::io::{Error, Write};
 use byte::ctx::Endian;
 use byte::{BytesExt, TryRead, TryWrite};
 #[cfg(feature = "generate-dashj-tests")]
 use serde::{Serialize, Serializer};
-use crate::consensus::Encodable;
+use crate::consensus::{Decodable, Encodable, encode};
 use crate::crypto::byte_util::BytesDecodable;
 
 #[warn(non_camel_case_types)]
@@ -53,6 +55,21 @@ impl From<LLMQVersion> for u16 {
         }
     }
 }
+
+impl Encodable for LLMQVersion {
+    fn consensus_encode<W: Write>(&self, writer: W) -> Result<usize, Error> {
+        u16::from(*self)
+            .consensus_encode(writer)
+    }
+}
+
+impl Decodable for LLMQVersion {
+    fn consensus_decode<D: io::Read>(mut d: D) -> Result<Self, encode::Error> {
+        u16::consensus_decode(&mut d)
+            .map(Into::into)
+    }
+}
+
 
 impl<'a> TryRead<'a, Endian> for LLMQVersion {
     fn try_read(bytes: &'a [u8], endian: Endian) -> byte::Result<(Self, usize)> {

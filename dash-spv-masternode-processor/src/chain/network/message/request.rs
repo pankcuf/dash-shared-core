@@ -161,7 +161,7 @@ impl Request {
                 local_nonce.enc(&mut writer);
             },
             Request::Version(socket_addr, services, local_nonce, chain_type) => {
-                writer.extend_from_slice(&Vec::from_hex("5312010000000000000000004007606400000000050000000000000000000000000000000000ffff55d1f34b4e1f000000000000000000000000000000000000ffff7f0000014e1f4edca9469d06be4e192f6461736877616c6c65743a312e3028746573746e6574292f0000000000").unwrap());
+                writer.extend_from_slice(&Vec::from_hex("cee2caff76657273696f6e00000000006f0000002ec15aed5312010000000000000000005830836400000000050000000000000000000000000000000000ffff55d1f3094e1f000000000000000000000000000000000000ffff7f0000014e1f2090bfb443b0118d192f6461736877616c6c65743a312e3028746573746e6574292f0000000000").unwrap());
                 // chain_type.protocol_version().enc(&mut writer);
                 // ENABLED_SERVICES.enc(&mut writer);
                 // SystemTime::seconds_since_1970().enc(&mut writer);

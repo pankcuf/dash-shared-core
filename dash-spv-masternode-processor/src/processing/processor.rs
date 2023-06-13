@@ -122,7 +122,7 @@ impl MasternodeProcessor {
         }
     }
 
-    pub(crate) fn get_list_diff_result_with_base_lookup(
+    pub fn get_list_diff_result_with_base_lookup(
         &self,
         list_diff: models::MNListDiff,
         should_process_quorums: bool,

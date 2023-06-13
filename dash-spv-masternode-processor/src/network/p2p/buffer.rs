@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
-use std::{cmp, io};
-use std::io::Read;
+use std::cmp;
+use std::io::{Error, Read, Take, Write};
 use crate::chain::network::peer::MAX_MSG_LENGTH;
 use crate::network::p2p::layer::IO_BUFFER_SIZE;
 
@@ -18,31 +18,10 @@ pub struct Buffer {
     checkpoint: (usize, usize)
 }
 
-pub struct PassThroughBufferReader<'a> {
-    buffer: &'a mut Buffer
-}
-
-impl<'a> PassThroughBufferReader<'a> {
-    pub fn new(buffer: &'a mut Buffer) -> Self {
-        Self { buffer }
-    }
-
-    pub fn take_max(self) -> io::Take<Self> {
-        self.take(MAX_MSG_LENGTH as u64)
-    }
-}
-
-impl<'a> io::Read for PassThroughBufferReader<'a> {
-    fn read(&mut self, buf: &mut [u8]) -> Result<usize, io::Error> {
-        self.buffer.read(buf)
-    }
-}
-
-
 impl Buffer {
     // create new buffer
-    pub(crate) fn new () -> Buffer {
-        Buffer{ chunks: VecDeque::new(), pos: (0, 0), checkpoint: (0, 0) }
+    pub(crate) fn new() -> Self {
+        Self { chunks: VecDeque::new(), pos: (0, 0), checkpoint: (0, 0) }
     }
 
     /// not yet consumed length of the buffer
@@ -66,7 +45,7 @@ impl Buffer {
 
     // read without advancing position
     // subsequent read would deliver the same data again
-    pub(crate) fn read_ahead(&mut self, buf: &mut [u8]) -> Result<usize, io::Error> {
+    pub(crate) fn read_ahead(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
         let mut pos = (self.pos.0, self.pos.1);
         if self.chunks.len() == 0 {
             // no chunks -> no content
@@ -107,75 +86,52 @@ impl Buffer {
     // advance position by len
     pub(crate) fn advance(&mut self, len: usize) -> usize {
         let mut have = 0;
-        // until read enough
         while have < len {
-            // current chunk
             let current = &self.chunks[self.pos.0];
-            // number of bytes available to read from current chunk
             let available = cmp::min(len - have, current.len() - self.pos.1);
-            // move pointer
             self.pos.1 += available;
-            // have more
             have += available;
-            // if current chunk was wholly read
             if self.pos.1 == current.len() {
-                // there are more chunks
                 if self.pos.0 < self.chunks.len() - 1 {
-                    // move pointer to begin of next chunk
                     self.pos.0 += 1;
                     self.pos.1 = 0;
                 } else {
-                    // we can't have more now
                     break;
                 }
             }
         }
-        // return the number of bytes that could be read
         have
     }
 
     // read and advance position in one step
-    fn read_advance(&mut self, buf: &mut [u8]) -> Result<usize, io::Error> {
+    fn read_advance(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
         if self.chunks.len() == 0 {
-            // no chunks -> no content
             Ok(0)
         } else {
-            // number of bytes already collected for the read
             let mut have = 0;
-            // until read enough
             while have < buf.len() {
-                // current chunk
                 let current = &self.chunks[self.pos.0];
-                // number of bytes available to read from current chunk
                 let available = cmp::min(buf.len() - have, current.len() - self.pos.1);
-                // copy those
-                buf[have..have+available].copy_from_slice(&current[self.pos.1..self.pos.1 + available]);
-                // move pointer
+                buf[have..have + available].copy_from_slice(&current[self.pos.1..self.pos.1 + available]);
                 self.pos.1 += available;
-                // have more
                 have += available;
-                // if current chunk was wholly read
                 if self.pos.1 == current.len() {
-                    // there are more chunks
                     if self.pos.0 < self.chunks.len() - 1 {
-                        // move pointer to begin of next chunk
                         self.pos.0 += 1;
                         self.pos.1 = 0;
                     } else {
-                        // we can't have more now
                         break;
                     }
                 }
             }
-            // return the number of bytes that could be read
             Ok(have)
         }
     }
 }
 
 // write adapter for above buffer
-impl io::Write for Buffer {
-    fn write(&mut self, buf: &[u8]) -> Result<usize, io::Error> {
+impl Write for Buffer {
+    fn write(&mut self, buf: &[u8]) -> Result<usize, Error> {
         if buf.len() > 0 {
             // number of chunks in buffer
             let mut nc = self.chunks.len();
@@ -191,15 +147,34 @@ impl io::Write for Buffer {
         Ok(buf.len())
     }
     // nop
-    fn flush(&mut self) -> Result<(), io::Error> {
+    fn flush(&mut self) -> Result<(), Error> {
         Ok(())
     }
 }
 
 // read adapter for above buffer
-impl io::Read for Buffer {
-    fn read(&mut self, buf: &mut [u8]) -> Result<usize, io::Error> {
+impl Read for Buffer {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
         self.read_advance(buf)
     }
 }
 
+pub struct PassThroughBufferReader<'a> {
+    buffer: &'a mut Buffer
+}
+
+impl<'a> PassThroughBufferReader<'a> {
+    pub fn new(buffer: &'a mut Buffer) -> Self {
+        Self { buffer }
+    }
+
+    pub fn take_max(self) -> Take<Self> {
+        self.take(MAX_MSG_LENGTH as u64)
+    }
+}
+
+impl<'a> Read for PassThroughBufferReader<'a> {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
+        self.buffer.read(buf)
+    }
+}

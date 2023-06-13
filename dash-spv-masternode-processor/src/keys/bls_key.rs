@@ -296,7 +296,7 @@ impl BLSKey {
         }
     }
 
-    pub(crate) fn bls_public_key(&self) -> Result<G1Element, BlsError> {
+    pub fn bls_public_key(&self) -> Result<G1Element, BlsError> {
         if self.pubkey.is_zero() {
             self.bls_private_key().and_then(|bls_pk| bls_pk.g1_element())
         } else {
