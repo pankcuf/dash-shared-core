@@ -617,9 +617,7 @@ name = "dash-spv-android-bindings"
 version = "0.1.0"
 dependencies = [
  "cbindgen 0.24.3",
- "dash-spv-masternode-processor",
  "libc",
- "rs-dapi-client",
  "tokio",
  "tonic",
 ]
@@ -642,6 +640,7 @@ dependencies = [
 name = "dash-spv-ffi"
 version = "0.1.0"
 dependencies = [
+ "byte",
  "cbindgen 0.24.3",
  "dash-spv-masternode-processor",
  "libc",

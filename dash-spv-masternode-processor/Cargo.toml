@@ -54,8 +54,8 @@ zeroize = "1.5.7"
 
 [dependencies.reachability]
 path = "../reachability"
-[dependencies.dash-spv-ffi]
-path = "../dash-spv-ffi"
+#[dependencies.dash-spv-ffi]
+#path = "../dash-spv-ffi"
 
 [dev-dependencies]
 base64 = "0.21.0"

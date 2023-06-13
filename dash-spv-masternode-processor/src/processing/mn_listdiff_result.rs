@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
-use crate::{models, types};
+use crate::models;
 use crate::chain::common;
 use crate::crypto::UInt256;
-use crate::ffi::boxer::{boxed, boxed_vec};
-use crate::ffi::to::{encode_masternodes_map, encode_quorums_map, ToFFI};
+// use crate::ffi::boxer::{boxed, boxed_vec};
+// use crate::ffi::to::{encode_masternodes_map, encode_quorums_map, ToFFI};
 use crate::processing::ProcessingError;
 
 pub struct MNListDiffResult {
@@ -76,37 +76,37 @@ impl MNListDiffResult {
     }
 }
 
-impl MNListDiffResult {
-    pub fn encode(&self) -> types::MNListDiffResult {
-        types::MNListDiffResult {
-            error_status: self.error_status.into(),
-            base_block_hash: boxed(self.base_block_hash.0),
-            block_hash: boxed(self.block_hash.0),
-            has_found_coinbase: self.has_found_coinbase,
-            has_valid_coinbase: self.has_valid_coinbase,
-            has_valid_mn_list_root: self.has_valid_mn_list_root,
-            has_valid_llmq_list_root: self.has_valid_llmq_list_root,
-            has_valid_quorums: self.has_valid_quorums,
-            masternode_list: boxed(self.masternode_list.encode()),
-            added_masternodes: encode_masternodes_map(&self.added_masternodes),
-            added_masternodes_count: self.added_masternodes.len(),
-            modified_masternodes: encode_masternodes_map(&self.modified_masternodes),
-            modified_masternodes_count: self.modified_masternodes.len(),
-            added_llmq_type_maps: encode_quorums_map(&self.added_quorums),
-            added_llmq_type_maps_count: self.added_quorums.len(),
-            needed_masternode_lists: boxed_vec(
-                self.needed_masternode_lists
-                    .iter()
-                    .map(|h| boxed(h.0))
-                    .collect(),
-            ),
-            needed_masternode_lists_count: self.needed_masternode_lists.len(),
-            quorums_cl_sigs_count: self.quorums_cl_sigs.len(),
-            quorums_cl_sigs: boxed_vec(
-                self.quorums_cl_sigs
-                    .iter()
-                    .map(|h| boxed(h.encode()))
-                    .collect())
-        }
-    }
-}
+// impl MNListDiffResult {
+//     pub fn encode(&self) -> types::MNListDiffResult {
+//         types::MNListDiffResult {
+//             error_status: self.error_status.into(),
+//             base_block_hash: boxed(self.base_block_hash.0),
+//             block_hash: boxed(self.block_hash.0),
+//             has_found_coinbase: self.has_found_coinbase,
+//             has_valid_coinbase: self.has_valid_coinbase,
+//             has_valid_mn_list_root: self.has_valid_mn_list_root,
+//             has_valid_llmq_list_root: self.has_valid_llmq_list_root,
+//             has_valid_quorums: self.has_valid_quorums,
+//             masternode_list: boxed(self.masternode_list.encode()),
+//             added_masternodes: encode_masternodes_map(&self.added_masternodes),
+//             added_masternodes_count: self.added_masternodes.len(),
+//             modified_masternodes: encode_masternodes_map(&self.modified_masternodes),
+//             modified_masternodes_count: self.modified_masternodes.len(),
+//             added_llmq_type_maps: encode_quorums_map(&self.added_quorums),
+//             added_llmq_type_maps_count: self.added_quorums.len(),
+//             needed_masternode_lists: boxed_vec(
+//                 self.needed_masternode_lists
+//                     .iter()
+//                     .map(|h| boxed(h.0))
+//                     .collect(),
+//             ),
+//             needed_masternode_lists_count: self.needed_masternode_lists.len(),
+//             quorums_cl_sigs_count: self.quorums_cl_sigs.len(),
+//             quorums_cl_sigs: boxed_vec(
+//                 self.quorums_cl_sigs
+//                     .iter()
+//                     .map(|h| boxed(h.encode()))
+//                     .collect())
+//         }
+//     }
+// }

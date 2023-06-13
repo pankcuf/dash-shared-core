@@ -1,10 +1,10 @@
 use byte::ctx::{Bytes, Endian};
 use byte::{BytesExt, TryRead, LE};
-use crate::common::LLMQSnapshotSkipMode;
-use crate::consensus::encode;
-use crate::crypto::byte_util::BytesDecodable;
+use dash_spv_masternode_processor::common::LLMQSnapshotSkipMode;
+use dash_spv_masternode_processor::consensus::encode;
+use dash_spv_masternode_processor::crypto::byte_util::BytesDecodable;
+use dash_spv_masternode_processor::impl_bytes_decodable;
 use crate::ffi::boxer::boxed_vec;
-use crate::impl_bytes_decodable;
 
 #[repr(C)]
 #[derive(Clone, Copy)]

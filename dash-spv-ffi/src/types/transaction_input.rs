@@ -1,7 +1,7 @@
 use byte::ctx::Endian;
 use byte::{BytesExt, TryRead, LE};
 use std::ptr::null_mut;
-use crate::crypto::{UInt256, VarBytes};
+use dash_spv_masternode_processor::crypto::{UInt256, VarBytes};
 use crate::ffi::boxer::{boxed, boxed_vec};
 
 #[repr(C)]

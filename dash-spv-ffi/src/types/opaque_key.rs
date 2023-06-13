@@ -1,8 +1,8 @@
 use std::ffi::CString;
 use std::os::raw::{c_char, c_void};
 use std::ptr::null_mut;
-use crate::ffi::boxer::boxed;
 use dash_spv_masternode_processor::keys::{BLSKey, ECDSAKey, ED25519Key, KeyKind};
+use crate::ffi::boxer::boxed;
 use crate::ffi::from::FromFFI;
 
 pub trait AsOpaqueKey {

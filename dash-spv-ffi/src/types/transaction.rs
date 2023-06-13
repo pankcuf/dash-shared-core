@@ -1,9 +1,9 @@
 use byte::ctx::Endian;
 use byte::{BytesExt, TryRead, LE};
 use std::ptr::null_mut;
-use crate::consensus;
+use dash_spv_masternode_processor::consensus;
+use dash_spv_masternode_processor::tx::{TransactionType, TX_UNCONFIRMED};
 use crate::ffi::boxer::{boxed, boxed_vec};
-use crate::tx::{TransactionType, TX_UNCONFIRMED};
 use crate::types::{TransactionInput, TransactionOutput};
 
 #[repr(C)]

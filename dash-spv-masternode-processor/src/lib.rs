@@ -41,7 +41,7 @@ pub mod network;
 pub mod platform;
 pub mod storage;
 pub mod tx;
-pub mod types;
+// pub mod types;
 pub mod util;
 
 // Don't remove, it's for testing purposes (look at ${project_dir}/c/main.c)

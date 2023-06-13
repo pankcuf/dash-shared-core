@@ -1,5 +1,5 @@
 use std::ptr::null_mut;
-use crate::processing::ProcessingError;
+use dash_spv_masternode_processor::processing::ProcessingError;
 use crate::types;
 
 #[repr(C)]

@@ -1,6 +1,8 @@
 use crate::types;
 use std::ptr::null_mut;
-use crate::processing::ProcessingError;
+use dash_spv_masternode_processor::processing::ProcessingError;
+use crate::ffi::boxer::{boxed, boxed_vec};
+use crate::ffi::to::{encode_masternodes_map, encode_quorums_map, ToFFI};
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
@@ -63,5 +65,40 @@ impl MNListDiffResult {
             && self.has_valid_quorums
             && self.has_valid_mn_list_root
             && self.has_valid_llmq_list_root
+    }
+}
+
+impl MNListDiffResult {
+    pub fn encode(result: dash_spv_masternode_processor::processing::MNListDiffResult) -> Self {
+        Self {
+            error_status: result.error_status.into(),
+            base_block_hash: boxed(result.base_block_hash.0),
+            block_hash: boxed(result.block_hash.0),
+            has_found_coinbase: result.has_found_coinbase,
+            has_valid_coinbase: result.has_valid_coinbase,
+            has_valid_mn_list_root: result.has_valid_mn_list_root,
+            has_valid_llmq_list_root: result.has_valid_llmq_list_root,
+            has_valid_quorums: result.has_valid_quorums,
+            masternode_list: boxed(result.masternode_list.encode()),
+            added_masternodes: encode_masternodes_map(&result.added_masternodes),
+            added_masternodes_count: result.added_masternodes.len(),
+            modified_masternodes: encode_masternodes_map(&result.modified_masternodes),
+            modified_masternodes_count: result.modified_masternodes.len(),
+            added_llmq_type_maps: encode_quorums_map(&result.added_quorums),
+            added_llmq_type_maps_count: result.added_quorums.len(),
+            needed_masternode_lists: boxed_vec(
+                result.needed_masternode_lists
+                    .iter()
+                    .map(|h| boxed(h.0))
+                    .collect(),
+            ),
+            needed_masternode_lists_count: result.needed_masternode_lists.len(),
+            quorums_cl_sigs_count: result.quorums_cl_sigs.len(),
+            quorums_cl_sigs: boxed_vec(
+                result.quorums_cl_sigs
+                    .iter()
+                    .map(|h| boxed(h.encode()))
+                    .collect())
+        }
     }
 }

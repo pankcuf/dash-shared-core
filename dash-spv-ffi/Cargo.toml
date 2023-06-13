@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 libc = "0.2.139"
+byte = "0.2.6"
 dash-spv-masternode-processor = { path = "../dash-spv-masternode-processor" }
 simplelog = "0.12.1"
 

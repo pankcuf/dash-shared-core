@@ -1,4 +1,4 @@
-use crate::common::LLMQVersion;
+use dash_spv_masternode_processor::common::LLMQVersion;
 use crate::types;
 
 #[repr(C)]
