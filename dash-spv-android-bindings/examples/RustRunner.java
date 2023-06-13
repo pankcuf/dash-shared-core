@@ -3,11 +3,12 @@ public class RustRunner {
         System.loadLibrary("DashSharedCore");
     }
 
-    private native void daspu(long runtimePtr, RustCallback callback, Object context);
+    private native long createRuntime();
+    private native void getStatus(long runtimePtr, RustCallback callback, Object context);
 
     public void run() {
         long runtimePtr = createRuntime();
-        runAsyncFunction(runtimePtr, (context, result) -> {
+        getStatus(runtimePtr, (context, result) -> {
             System.out.println("Async result: " + result);
         }, null);
         // Other code
