@@ -1,9 +1,10 @@
 extern crate libc;
 use std::ffi::c_void;
-use crate::{models, types};
-use crate::crypto::{byte_util::MutDecodable, UInt256};
+use dash_spv_masternode_processor::crypto::{byte_util::MutDecodable, UInt256};
+use dash_spv_masternode_processor::models;
+use dash_spv_masternode_processor::processing::ProcessingError;
 use crate::ffi::from::FromFFI;
-use crate::processing::ProcessingError;
+use crate::types;
 
 pub type AddInsightBlockingLookup =
     unsafe extern "C" fn(block_hash: *mut [u8; 32], context: *const c_void);

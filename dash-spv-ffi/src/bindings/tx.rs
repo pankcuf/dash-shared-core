@@ -1,11 +1,11 @@
 use std::slice;
-use crate::chain::common::ChainType;
-use crate::consensus::Encodable;
-use crate::crypto::{byte_util::{AsBytes, Reversable}, UInt160, UInt256};
+use dash_spv_masternode_processor::chain::common::ChainType;
+use dash_spv_masternode_processor::consensus::Encodable;
+use dash_spv_masternode_processor::crypto::{byte_util::{AsBytes, Reversable}, UInt160, UInt256};
+use dash_spv_masternode_processor::keys::ECDSAKey;
+use dash_spv_masternode_processor::util::address::address;
+use dash_spv_masternode_processor::util::data_ops::DASH_MESSAGE_MAGIC;
 use crate::ffi::ByteArray;
-use crate::keys::ECDSAKey;
-use crate::util::address::address;
-use crate::util::data_ops::DASH_MESSAGE_MAGIC;
 
 
 #[no_mangle]

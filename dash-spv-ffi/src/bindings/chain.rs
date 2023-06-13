@@ -1,9 +1,9 @@
 use std::ffi::CStr;
 use std::os::raw::c_char;
-use crate::chain::common::{ChainType, DevnetType};
+use dash_spv_masternode_processor::chain::common::{ChainType, DevnetType};
+use dash_spv_masternode_processor::util::data_append::DataAppend;
 use crate::ffi::ByteArray;
 use crate::types::opaque_key::AsCStringPtr;
-use crate::util::data_append::DataAppend;
 
 /// # Safety
 #[no_mangle]

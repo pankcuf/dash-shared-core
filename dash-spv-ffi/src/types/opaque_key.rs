@@ -2,7 +2,8 @@ use std::ffi::CString;
 use std::os::raw::{c_char, c_void};
 use std::ptr::null_mut;
 use crate::ffi::boxer::boxed;
-use crate::keys::{BLSKey, ECDSAKey, ED25519Key, KeyKind};
+use dash_spv_masternode_processor::keys::{BLSKey, ECDSAKey, ED25519Key, KeyKind};
+use crate::ffi::from::FromFFI;
 
 pub trait AsOpaqueKey {
     fn to_opaque_ptr(self) -> *mut OpaqueKey;
@@ -96,7 +97,6 @@ impl AsOpaqueKey for Option<ED25519Key> {
     }
 }
 
-
 impl From<ECDSAKey> for *mut OpaqueKey {
     fn from(value: ECDSAKey) -> Self {
         boxed(OpaqueKey::ECDSA(boxed(value)))
@@ -118,6 +118,12 @@ impl From<ED25519Key> for *mut OpaqueKey {
         boxed(OpaqueKey::ED25519(boxed(value)))
     }
 }
+
+// impl Into<OpaqueKey> for ED25519Key {
+//     fn into(self) -> *mut OpaqueKey {
+//         todo!()
+//     }
+// }
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]

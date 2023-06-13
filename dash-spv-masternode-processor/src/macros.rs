@@ -9,27 +9,6 @@ macro_rules! unwrap_or_return {
 }
 
 #[macro_export]
-macro_rules! unwrap_or_failure {
-    ($e: expr) => {
-        unwrap_or_return!($e, || boxed(types::MNListDiffResult::default()))
-    };
-}
-
-#[macro_export]
-macro_rules! unwrap_or_qr_failure {
-    ($e: expr) => {
-        unwrap_or_return!($e, || boxed(types::QRInfo::default()))
-    };
-}
-
-#[macro_export]
-macro_rules! unwrap_or_qr_result_failure {
-    ($e: expr) => {
-        unwrap_or_return!($e, || boxed(types::QRInfoResult::default()))
-    };
-}
-
-#[macro_export]
 macro_rules! unwrap_or_qr_processing_failure {
     ($e: expr) => {
         unwrap_or_return!($e, || crate::processing::QRInfoResult::default())

@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 use std::ptr::null_mut;
-use crate::{common, models, tx, types};
-use crate::chain::common::LLMQType;
-use crate::crypto::UInt256;
+use dash_spv_masternode_processor::{common, models, tx, types};
+use dash_spv_masternode_processor::chain::common::LLMQType;
+use dash_spv_masternode_processor::crypto::UInt256;
 use crate::ffi::boxer::{boxed, boxed_vec};
 use crate::ffi::from::FromFFI;
 

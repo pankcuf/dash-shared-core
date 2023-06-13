@@ -25,7 +25,6 @@ use core2::io;
 pub mod internal_macros;
 #[macro_use]
 pub mod macros;
-pub mod bindings;
 pub mod blockdata;
 pub mod chain;
 pub mod chains_manager;

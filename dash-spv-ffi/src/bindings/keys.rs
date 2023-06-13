@@ -3,24 +3,24 @@ use std::os::raw::{c_char, c_ulong, c_void};
 use std::ptr::null_mut;
 use std::slice;
 use byte::BytesExt;
-use secp256k1::Scalar;
-use crate::chain::bip::bip32;
-use crate::chain::bip::bip38::BIP38;
-use crate::chain::common::{ChainType, IHaveChainSettings};
-use crate::chain::derivation::{BIP32_HARD, IndexPath};
-use crate::consensus::Encodable;
-use crate::crypto::byte_util::{AsBytes, clone_into_array, ConstDecodable, Reversable, Zeroable};
-use crate::crypto::{UInt160, UInt256, UInt384, UInt512, UInt768};
+// use secp256k1::Scalar;
+use dash_spv_masternode_processor::chain::bip::bip32;
+use dash_spv_masternode_processor::chain::bip::bip38::BIP38;
+use dash_spv_masternode_processor::chain::common::{ChainType, IHaveChainSettings};
+use dash_spv_masternode_processor::chain::derivation::{BIP32_HARD, IndexPath};
+use dash_spv_masternode_processor::consensus::Encodable;
+use dash_spv_masternode_processor::crypto::byte_util::{AsBytes, clone_into_array, ConstDecodable, Reversable, Zeroable};
+use dash_spv_masternode_processor::crypto::{UInt160, UInt256, UInt384, UInt512, UInt768};
+use dash_spv_masternode_processor::keys::{BLSKey, ECDSAKey, ED25519Key, IKey, KeyKind};
+use dash_spv_masternode_processor::keys::crypto_data::{CryptoData, DHKey};
+use dash_spv_masternode_processor::keys::dip14::secp256k1_point_from_bytes;
+use dash_spv_masternode_processor::processing::keys_cache::KeysCache;
+use dash_spv_masternode_processor::util::address::address;
+use dash_spv_masternode_processor::util::sec_vec::SecVec;
 use crate::ffi::boxer::{boxed, boxed_vec};
 use crate::ffi::{ByteArray, IndexPathData};
 use crate::ffi::unboxer::{unbox_any, unbox_opaque_key, unbox_opaque_keys, unbox_opaque_serialized_keys};
-use crate::keys::{BLSKey, ECDSAKey, ED25519Key, IKey, KeyKind};
-use crate::keys::crypto_data::{CryptoData, DHKey};
-use crate::keys::dip14::secp256k1_point_from_bytes;
-use crate::processing::keys_cache::KeysCache;
 use crate::types::opaque_key::{AsCStringPtr, AsOpaqueKey, OpaqueKey, KeyWithUniqueId, OpaqueKeys, OpaqueSerializedKeys};
-use crate::util::address::address;
-use crate::util::sec_vec::SecVec;
 
 /// Destroys
 /// # Safety
@@ -922,8 +922,8 @@ pub unsafe extern "C" fn deprecated_incorrect_extended_public_key_from_seed(seed
                 }
                 buf[33..37].copy_from_slice(soft_index.to_be_bytes().as_slice());
                 let i = UInt512::hmac(chaincode.as_ref(), buf);
-                let mut sec_key = secp256k1::SecretKey::from_slice(&key.0).expect("invalid private key");
-                let tweak = Scalar::from_be_bytes(clone_into_array(&i.0[..32])).expect("invalid tweak");
+                let mut sec_key = dash_spv_masternode_processor::secp256k1::SecretKey::from_slice(&key.0).expect("invalid private key");
+                let tweak = dash_spv_masternode_processor::secp256k1::Scalar::from_be_bytes(clone_into_array(&i.0[..32])).expect("invalid tweak");
                 sec_key = sec_key.add_tweak(&tweak).expect("failed to add tweak");
                 key.0.copy_from_slice(&sec_key.secret_bytes());
                 chaincode.0.copy_from_slice(&i.0[32..]);

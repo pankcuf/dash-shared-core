@@ -1,13 +1,14 @@
 use byte::{BytesExt, ctx::{Bytes, Endian}, TryRead, LE};
 use hashes::hex::ToHex;
 use std::convert::Into;
+use std::io::{Error, Write};
 #[cfg(feature = "generate-dashj-tests")]
 use serde::ser::SerializeStruct;
 #[cfg(feature = "generate-dashj-tests")]
 use serde::{Serialize, Serializer};
 use crate::chain::common::LLMQType;
 use crate::common::LLMQVersion;
-use crate::consensus::{encode::VarInt, Encodable, WriteExt};
+use crate::consensus::{encode::VarInt, Encodable, WriteExt, Decodable, encode};
 use crate::crypto::{byte_util::AsBytes, data_ops::Data, UInt256, UInt384, UInt768};
 use crate::keys::BLSKey;
 use crate::models;
@@ -27,6 +28,7 @@ pub struct LLMQEntry {
     pub valid_members_bitset: Vec<u8>,
     pub valid_members_count: VarInt,
     pub entry_hash: UInt256,
+
     pub verified: bool,
     pub saved: bool,
     pub commitment_hash: Option<UInt256>,
@@ -123,6 +125,59 @@ impl<'a> TryRead<'a, Endian> for LLMQEntry {
         Ok((entry, *offset))
     }
 }
+
+impl Encodable for LLMQEntry {
+    fn consensus_encode<W: Write>(&self, mut writer: W) -> Result<usize, Error> {
+        let mut len = 0;
+        len += self.version.consensus_encode(&mut writer)?;
+        len += self.llmq_type.consensus_encode(&mut writer)?;
+        len += self.llmq_hash.consensus_encode(&mut writer)?;
+        if let Some(index) = self.index {
+            len += index.consensus_encode(&mut writer)?;
+        }
+        len += self.signers_bitset.consensus_encode(&mut writer)?;
+        len += self.valid_members_bitset.consensus_encode(&mut writer)?;
+        len += self.public_key.consensus_encode(&mut writer)?;
+        len += self.verification_vector_hash.consensus_encode(&mut writer)?;
+        len += self.threshold_signature.consensus_encode(&mut writer)?;
+        len += self.all_commitment_aggregated_signature.consensus_encode(&mut writer)?;
+        Ok(len)
+
+    }
+}
+
+// impl Decodable for LLMQEntry {
+//     fn consensus_decode<D: io::Read>(mut d: D) -> Result<Self, encode::Error> {
+//         let version = LLMQVersion::consensus_decode(&mut d)?;
+//         let llmq_type = LLMQType::consensus_decode(&mut d)?;
+//         let llmq_hash = UInt256::consensus_decode(&mut d)?;
+//         let index = version.use_rotated_quorums().then_some(u16::consensus_decode(&mut d)?);
+//         let signers = Vec::<u8>::consensus_decode(&mut d)?;
+//         let valid_members = Vec::<u8>::consensus_decode(&mut d)?;
+//         let public_key = UInt384::consensus_decode(&mut d)?;
+//         let verification_vector_hash = UInt256::consensus_decode(&mut d)?;
+//         let threshold_signature = UInt768::consensus_decode(&mut d)?;
+//         let all_commitment_aggregated_signature = UInt768::consensus_decode(&mut d)?;
+//         Ok(LLMQEntry {
+//             version,
+//             llmq_type,
+//             llmq_hash,
+//             index,
+//             signers_bitset: vec![],
+//             signers_count: VarInt(),
+//             valid_members_bitset: vec![],
+//             valid_members_count: VarInt(),
+//             public_key,
+//             verification_vector_hash,
+//             threshold_signature,
+//             all_commitment_aggregated_signature,
+//             entry_hash: UInt256::MIN,
+//             verified: false,
+//             saved: false,
+//             commitment_hash: None,
+//         })
+//     }
+// }
 
 impl LLMQEntry {
     #[allow(clippy::too_many_arguments)]

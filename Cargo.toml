@@ -1,8 +1,11 @@
 [workspace]
 members = [
+    "dash-spv-android-bindings",
     "dash-spv-apple-bindings",
     "dash-spv-example-app",
+    "dash-spv-ffi",
     "dash-spv-masternode-processor",
+    "dash-spv-platform",
     "reachability",
 ]
 

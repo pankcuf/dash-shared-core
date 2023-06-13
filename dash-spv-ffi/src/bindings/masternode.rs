@@ -1,12 +1,13 @@
 use std::ptr::null_mut;
 use std::slice;
 use byte::BytesExt;
-use crate::{models, types};
-use crate::chain::common::{ChainType, IHaveChainSettings, LLMQType};
-use crate::consensus::encode;
-use crate::crypto::{UInt256, byte_util::{BytesDecodable, ConstDecodable}};
+use dash_spv_masternode_processor::{models, types};
+use dash_spv_masternode_processor::chain::common::{ChainType, IHaveChainSettings, LLMQType};
+use dash_spv_masternode_processor::consensus::encode;
+use dash_spv_masternode_processor::crypto::{UInt256, byte_util::{BytesDecodable, ConstDecodable}};
+use dash_spv_masternode_processor::processing::{MasternodeProcessor, MasternodeProcessorCache, ProcessingError};
 use crate::ffi::{boxer::{boxed, boxed_vec}, ByteArray, from::FromFFI, to::ToFFI};
-use crate::processing::{MasternodeProcessor, MasternodeProcessorCache, ProcessingError};
+use crate::{unwrap_or_failure, unwrap_or_qr_result_failure};
 
 /// Read and process message received as a response for 'GETMNLISTDIFF' call
 /// Here we calculate quorums according to Core v0.17

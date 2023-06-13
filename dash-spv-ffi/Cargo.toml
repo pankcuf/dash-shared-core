@@ -1,0 +1,17 @@
+[package]
+name = "dash-spv-ffi"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+libc = "0.2.139"
+dash-spv-masternode-processor = { path = "../dash-spv-masternode-processor" }
+simplelog = "0.12.1"
+
+[build-dependencies]
+cbindgen = "0.24.3"
+
+[lib]
+name = "dash_spv_ffi"
+crate-type = ["staticlib", "cdylib"]
+

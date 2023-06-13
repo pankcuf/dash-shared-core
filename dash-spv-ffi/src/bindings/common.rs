@@ -2,12 +2,11 @@ use std::ffi::CString;
 use std::fs::File;
 use std::os::raw::c_char;
 use simplelog::{ColorChoice, CombinedLogger, ConfigBuilder, LevelFilter, TerminalMode, TermLogger, WriteLogger};
-use crate::crypto::byte_util::ConstDecodable;
-use crate::crypto::UInt256;
+use dash_spv_masternode_processor::crypto::{byte_util::ConstDecodable, UInt256};
+use dash_spv_masternode_processor::processing::{MasternodeProcessor, MasternodeProcessorCache};
 use crate::ffi::boxer::boxed;
 use crate::ffi::callbacks::{AddInsightBlockingLookup, GetBlockHashByHeight, GetBlockHeightByHash, GetLLMQSnapshotByBlockHash, HashDestroy, LLMQSnapshotDestroy, MasternodeListDestroy, MasternodeListLookup, MasternodeListSave, MerkleRootLookup, SaveLLMQSnapshot, ShouldProcessDiffWithRange};
 use crate::ffi::unboxer::{unbox_any, unbox_block, unbox_llmq_snapshot, unbox_llmq_validation_data, unbox_masternode_list, unbox_mn_list_diff_result, unbox_qr_info_result, unbox_vec_ptr};
-use crate::processing::{MasternodeProcessor, MasternodeProcessorCache};
 use crate::types;
 
 

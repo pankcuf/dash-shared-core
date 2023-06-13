@@ -1,12 +1,12 @@
 use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::slice;
-use crate::chain::common::ChainType;
-use crate::crypto::{byte_util::ConstDecodable, UInt160};
+use dash_spv_masternode_processor::chain::common::ChainType;
+use dash_spv_masternode_processor::crypto::{byte_util::ConstDecodable, UInt160};
+use dash_spv_masternode_processor::util::address::address;
+use dash_spv_masternode_processor::util::data_append::DataAppend;
 use crate::ffi::ByteArray;
 use crate::types::opaque_key::AsCStringPtr;
-use crate::util::address::address;
-use crate::util::data_append::DataAppend;
 
 /// # Safety
 #[no_mangle]
