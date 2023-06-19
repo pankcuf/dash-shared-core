@@ -1,3 +1,4 @@
+use dash_spv_ffi::boxed;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_void};
 use std::ptr::null_mut;

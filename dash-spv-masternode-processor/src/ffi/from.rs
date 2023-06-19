@@ -106,7 +106,7 @@ impl FromFFI for types::CoinbaseTransaction {
     }
 }
 
-impl FromFFI for types::MasternodeList {
+impl FromFFI for types::MasternodeListFFI {
     type Item = models::MasternodeList;
 
     unsafe fn decode(&self) -> Self::Item {
@@ -164,7 +164,7 @@ impl FromFFI for types::OperatorPublicKey {
     }
 }
 
-impl FromFFI for types::MasternodeEntry {
+impl FromFFI for types::MasternodeEntryFFI {
     type Item = models::MasternodeEntry;
     unsafe fn decode(&self) -> Self::Item {
         Self::Item {

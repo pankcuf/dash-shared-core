@@ -1,11 +1,12 @@
 use std::ptr::null_mut;
 use std::slice;
 use byte::BytesExt;
+use dash_spv_ffi::{boxed, boxed_vec};
 use crate::{models, types};
 use crate::chain::common::{ChainType, IHaveChainSettings, LLMQType};
 use crate::consensus::encode;
 use crate::crypto::{UInt256, byte_util::{BytesDecodable, ConstDecodable}};
-use crate::ffi::{boxer::{boxed, boxed_vec}, ByteArray, from::FromFFI, to::ToFFI};
+use crate::ffi::{ByteArray, from::FromFFI, to::ToFFI};
 use crate::processing::{MasternodeProcessor, MasternodeProcessorCache, ProcessingError};
 
 /// Read and process message received as a response for 'GETMNLISTDIFF' call
@@ -23,7 +24,7 @@ pub unsafe extern "C" fn process_mnlistdiff_from_message(
     processor: *mut MasternodeProcessor,
     cache: *mut MasternodeProcessorCache,
     context: *const std::ffi::c_void,
-) -> *mut types::MNListDiffResult {
+) -> *mut types::MNListDiffResultFFI {
     let instant = std::time::Instant::now();
     let processor = &mut *processor;
     let cache = &mut *cache;
@@ -39,7 +40,7 @@ pub unsafe extern "C" fn process_mnlistdiff_from_message(
             .should_process_diff_with_range(list_diff.base_block_hash, list_diff.block_hash);
         if error != ProcessingError::None {
             println!("process_mnlistdiff_from_message <- {:?} ms [{:?}]", instant.elapsed().as_millis(), error);
-            return boxed(types::MNListDiffResult::default_with_error(error));
+            return boxed(types::MNListDiffResultFFI::default_with_error(error));
         }
     }
     let result = processor.get_list_diff_result_with_base_lookup(list_diff, true, false, false, cache);
@@ -64,7 +65,7 @@ pub unsafe extern "C" fn process_qrinfo_from_message(
     processor: *mut MasternodeProcessor,
     cache: *mut MasternodeProcessorCache,
     context: *const std::ffi::c_void,
-) -> *mut types::QRInfoResult {
+) -> *mut types::QRInfoResultFFI {
     let instant = std::time::Instant::now();
     let message: &[u8] = slice::from_raw_parts(message, message_length as usize);
     let processor = &mut *processor;
@@ -92,7 +93,7 @@ pub unsafe extern "C" fn process_qrinfo_from_message(
             processor.should_process_diff_with_range(diff_tip.base_block_hash, diff_tip.block_hash);
         if error != ProcessingError::None {
             println!("process_qrinfo_from_message <- {:?} ms [{:#?}]", instant.elapsed().as_millis(), error);
-            return boxed(types::QRInfoResult::default_with_error(error));
+            return boxed(types::QRInfoResultFFI::default_with_error(error));
         }
     }
     let diff_h = unwrap_or_qr_result_failure!(read_list_diff(offset));
@@ -128,7 +129,7 @@ pub unsafe extern "C" fn process_qrinfo_from_message(
         snapshots.push(snapshot);
     }
     let mn_list_diff_list_count = unwrap_or_qr_result_failure!(read_var_int(offset)).0 as usize;
-    let mut mn_list_diff_list_vec: Vec<*mut types::MNListDiffResult> =
+    let mut mn_list_diff_list_vec: Vec<*mut types::MNListDiffResultFFI> =
         Vec::with_capacity(mn_list_diff_list_count);
     assert_eq!(
         quorum_snapshot_list_count, mn_list_diff_list_count,
@@ -153,7 +154,7 @@ pub unsafe extern "C" fn process_qrinfo_from_message(
     let result_at_h_c = get_list_diff_result(diff_h_c, false);
     let result_at_h = get_list_diff_result(diff_h, true);
     let result_at_tip = get_list_diff_result(diff_tip, false);
-    let result = types::QRInfoResult {
+    let result = types::QRInfoResultFFI {
         error_status: ProcessingError::None,
         result_at_tip,
         result_at_h,
@@ -186,7 +187,7 @@ pub unsafe extern "C" fn process_qrinfo_from_message(
 
 /// # Safety
 #[no_mangle]
-pub unsafe extern "C" fn processor_cache_masternode_list(block_hash: *const u8, list: *const types::MasternodeList, cache: *mut MasternodeProcessorCache) {
+pub unsafe extern "C" fn processor_cache_masternode_list(block_hash: *const u8, list: *const types::MasternodeListFFI, cache: *mut MasternodeProcessorCache) {
     let hash = UInt256::from_const(block_hash).unwrap();
     let list = (*list).decode();
     (&mut *cache).mn_lists.insert(hash, list);
@@ -194,7 +195,7 @@ pub unsafe extern "C" fn processor_cache_masternode_list(block_hash: *const u8, 
 
 /// # Safety
 #[no_mangle]
-pub unsafe extern "C" fn validate_masternode_list(list: *const types::MasternodeList, quorum: *const types::LLMQEntry, block_height: u32, chain_type: ChainType) -> bool {
+pub unsafe extern "C" fn validate_masternode_list(list: *const types::MasternodeListFFI, quorum: *const types::LLMQEntry, block_height: u32, chain_type: ChainType) -> bool {
     let list = (*list).decode();
     let mut quorum = (*quorum).decode();
     let is_valid_payload = quorum.validate_payload();

@@ -1,17 +1,25 @@
 use std::ffi::CStr;
+use std::ptr::null_mut;
 use std::os::raw::c_char;
 use crate::core::core::get_status;
 use crate::ffi::boxer::boxed;
 use crate::ffi::opaque_runtime::OpaqueRuntime;
-use crate::ffi::ToFFI;
 use crate::ffi::unboxer::unbox_any;
+
+use dash_spv_ffi::FFIConversion;
+use dash_spv_macro_derive::ffi_conversion;
+use rs_dapi_client::rs_dapi_client::{get_status_response::{
+    Chain, Masternode, Network, NetworkFee, Time, Version,
+}, GetStatusResponse};
+use tokio::runtime::Runtime;
+
 
 pub mod core;
 pub mod ffi;
 
 // Define a callback type that represents a function that takes a pointer
 // to a GetStatusResponse structure.
-pub type GetStatusResponseCallback = extern "C" fn(*mut ffi::get_status_response::GetStatusResponse);
+pub type GetStatusResponseCallback = extern "C" fn(*mut GetStatusResponseFFI);
 
 
 /// Create a new Tokio runtime.
@@ -54,13 +62,88 @@ pub unsafe extern "C" fn destroy_runtime(runtime_ptr: *mut OpaqueRuntime) {
 /// - `address`: A pointer to a null-terminated string representing the DAPI node's address.
 /// - `callback`: The callback function to be called with the result of the request.
 #[no_mangle]
-pub extern "C" fn dapi_core_get_status(runtime_ptr: *mut OpaqueRuntime, address: *const c_char, callback: GetStatusResponseCallback) {
+pub unsafe extern "C" fn dapi_core_get_status(runtime_ptr: *mut OpaqueRuntime, address: *const c_char, callback: GetStatusResponseCallback) {
     let c_str = unsafe { CStr::from_ptr(address) };
     let host = c_str.to_str().unwrap();
     let opaque_runtime = unsafe { &mut *runtime_ptr };
     opaque_runtime.runtime.spawn(async move {
         let result = get_status(host).await;
-        callback(boxed(result.into_inner().encode()));
+        let response: *mut GetStatusResponseFFI = FFIConversion::ffi_to(result.into_inner());
+        callback(response);
     });
 }
+
+#[repr(C)]
+pub struct OpaqueRuntime {
+    pub(crate) runtime: Runtime,
+}
+
+
+#[repr(C)]
+#[ffi_conversion(Version)]
+pub struct VersionFFI {
+    pub protocol: u32,
+    pub software: u32,
+    pub agent: *mut c_char,
+}
+
+#[repr(C)]
+#[ffi_conversion(Time)]
+pub struct TimeFFI {
+    pub now: u32,
+    pub offset: i32,
+    pub median: u32,
+}
+
+#[repr(C)]
+#[ffi_conversion(Chain)]
+pub struct ChainFFI {
+    pub name: *mut c_char,
+    pub headers_count: u32,
+    pub blocks_count: u32,
+    pub best_block_hash: *mut [u8; 32],
+    pub difficulty: f64,
+    pub chain_work: *mut [u8; 32],
+    pub is_synced: bool,
+    pub sync_progress: f64,
+}
+
+#[repr(C)]
+#[ffi_conversion(Masternode)]
+pub struct MasternodeFFI {
+    pub status: i32,
+    pub pro_tx_hash: *mut [u8; 32],
+    pub pose_penalty: u32,
+    pub is_synced: bool,
+    pub sync_progress: f64,
+}
+
+#[repr(C)]
+#[ffi_conversion(Network)]
+pub struct NetworkFFI {
+    pub peers_count: u32,
+    pub fee: *mut NetworkFeeFFI,
+}
+
+#[repr(C)]
+#[ffi_conversion(NetworkFee)]
+pub struct NetworkFeeFFI {
+    pub relay: f64,
+    pub incremental: f64,
+}
+
+#[repr(C)]
+#[ffi_conversion(GetStatusResponse)]
+pub struct GetStatusResponseFFI {
+    pub version: *mut VersionFFI,
+    pub time: *mut TimeFFI,
+    pub status: i32,
+    pub sync_progress: f64,
+    pub chain: *mut ChainFFI,
+    pub masternode: *mut MasternodeFFI,
+    pub network: *mut NetworkFFI,
+}
+
+unsafe impl Send for GetStatusResponseFFI {}
+
 

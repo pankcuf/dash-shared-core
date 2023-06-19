@@ -1,11 +1,11 @@
 use byte::ctx::{Bytes, Endian};
 use byte::{BytesExt, TryRead, LE};
+use dash_spv_ffi::{boxed, boxed_vec};
 use std::ptr::null_mut;
 use crate::chain::common::llmq_type::LLMQType;
 use crate::common::llmq_version::LLMQVersion;
 use crate::consensus;
 use crate::crypto::byte_util::{UInt256, UInt384, UInt768};
-use crate::ffi::boxer::{boxed, boxed_vec};
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]

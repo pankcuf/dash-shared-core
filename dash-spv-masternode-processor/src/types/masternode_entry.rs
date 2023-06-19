@@ -1,8 +1,10 @@
+use dash_spv_ffi::FFIConversion;
 use crate::types::{BlockOperatorPublicKey, MasternodeEntryHash, OperatorPublicKey, Validity};
-
+use crate::models::MasternodeEntry;
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
-pub struct MasternodeEntry {
+#[dash_spv_macro_derive::ffi_conversion(MasternodeEntry)]
+pub struct MasternodeEntryFFI {
     pub confirmed_hash: *mut [u8; 32],
     pub confirmed_hash_hashed_with_provider_registration_transaction_hash: *mut [u8; 32], // nullable
     pub is_valid: bool,

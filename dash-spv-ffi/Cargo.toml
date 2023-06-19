@@ -1,0 +1,12 @@
+[package]
+name = "dash-spv-ffi"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dash-spv-macro-derive = { path = "../dash-spv-macro-derive" }
+[build-dependencies]
+cbindgen = "0.24.3"
+
+[lib]
+name = "dash_spv_ffi"

@@ -1,12 +1,12 @@
 use std::ffi::CString;
 use std::fs::File;
 use std::os::raw::c_char;
+use dash_spv_ffi::{boxed, unbox_any, unbox_vec_ptr};
 use simplelog::{ColorChoice, CombinedLogger, ConfigBuilder, LevelFilter, TerminalMode, TermLogger, WriteLogger};
 use crate::crypto::byte_util::ConstDecodable;
 use crate::crypto::UInt256;
-use crate::ffi::boxer::boxed;
 use crate::ffi::callbacks::{AddInsightBlockingLookup, GetBlockHashByHeight, GetBlockHeightByHash, GetLLMQSnapshotByBlockHash, HashDestroy, LLMQSnapshotDestroy, MasternodeListDestroy, MasternodeListLookup, MasternodeListSave, MerkleRootLookup, SaveLLMQSnapshot, ShouldProcessDiffWithRange};
-use crate::ffi::unboxer::{unbox_any, unbox_block, unbox_llmq_snapshot, unbox_llmq_validation_data, unbox_masternode_list, unbox_mn_list_diff_result, unbox_qr_info_result, unbox_vec_ptr};
+use crate::ffi::unboxer::{unbox_block, unbox_llmq_snapshot, unbox_llmq_validation_data, unbox_masternode_list, unbox_mn_list_diff_result, unbox_qr_info_result};
 use crate::processing::{MasternodeProcessor, MasternodeProcessorCache};
 use crate::types;
 
@@ -171,23 +171,23 @@ pub unsafe extern "C" fn processor_destroy_llmq_validation_data(
 }
 
 /// # Safety
-/// Destroys types::MNListDiffResult
+/// Destroys types::MasternodeList
 #[no_mangle]
-pub unsafe extern "C" fn processor_destroy_masternode_list(list: *mut types::MasternodeList) {
+pub unsafe extern "C" fn processor_destroy_masternode_list(list: *mut types::MasternodeListFFI) {
     unbox_masternode_list(list);
 }
 
-/// Destroys types::MNListDiffResult
+/// Destroys types::MNListDiffResultFFI
 /// # Safety
 #[no_mangle]
-pub unsafe extern "C" fn processor_destroy_mnlistdiff_result(result: *mut types::MNListDiffResult) {
+pub unsafe extern "C" fn processor_destroy_mnlistdiff_result(result: *mut types::MNListDiffResultFFI) {
     unbox_mn_list_diff_result(result);
 }
 
 /// Destroys types::LLMQRotationInfoResult
 /// # Safety
 #[no_mangle]
-pub unsafe extern "C" fn processor_destroy_qr_info_result(result: *mut types::QRInfoResult) {
+pub unsafe extern "C" fn processor_destroy_qr_info_result(result: *mut types::QRInfoResultFFI) {
     unbox_qr_info_result(result);
 }
 

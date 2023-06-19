@@ -78,7 +78,7 @@ checksum = "b9ccdd8f2a161be9bd5c023df56f1b2a0bd1d83872ae53b71a84a12c9bf6e842"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.15",
+ "syn 2.0.18",
 ]
 
 [[package]]
@@ -619,6 +619,8 @@ name = "dash-spv-android-bindings"
 version = "0.1.0"
 dependencies = [
  "cbindgen 0.24.3",
+ "dash-spv-ffi",
+ "dash-spv-macro-derive",
  "dash-spv-masternode-processor",
  "rs-dapi-client",
  "tokio",
@@ -640,6 +642,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "dash-spv-ffi"
+version = "0.1.0"
+dependencies = [
+ "cbindgen 0.24.3",
+ "dash-spv-macro-derive",
+]
+
+[[package]]
+name = "dash-spv-macro-derive"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "dash-spv-masternode-processor"
 version = "0.4.4"
 dependencies = [
@@ -654,6 +672,8 @@ dependencies = [
  "byte",
  "cbindgen 0.24.5",
  "core2",
+ "dash-spv-ffi",
+ "dash-spv-macro-derive",
  "dirs-next",
  "ed25519-dalek",
  "futures",
@@ -959,7 +979,7 @@ checksum = "89ca545a94061b6365f2c7355b4b32bd20df3ff95f02da9329b34ccc3bd6ee72"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.15",
+ "syn 2.0.18",
 ]
 
 [[package]]
@@ -1673,7 +1693,7 @@ checksum = "39407670928234ebc5e6e580247dd567ad73a3578460c5990f9503df207e8f07"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.15",
+ "syn 2.0.18",
 ]
 
 [[package]]
@@ -2636,7 +2656,7 @@ checksum = "0f57e3ca2a01450b1a921183a9c9cbfda207fd822cef4ccb00a65402cbba7a74"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.15",
+ "syn 2.0.18",
 ]
 
 [[package]]

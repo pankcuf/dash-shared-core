@@ -20,11 +20,11 @@ pub type MerkleRootLookup =
 pub type MasternodeListLookup = unsafe extern "C" fn(
     block_hash: *mut [u8; 32],
     context: *const c_void,
-) -> *mut types::MasternodeList;
-pub type MasternodeListDestroy = unsafe extern "C" fn(masternode_list: *mut types::MasternodeList);
+) -> *mut types::MasternodeListFFI;
+pub type MasternodeListDestroy = unsafe extern "C" fn(masternode_list: *mut types::MasternodeListFFI);
 pub type MasternodeListSave = unsafe extern "C" fn(
     block_hash: *mut [u8; 32],
-    masternode_list: *mut types::MasternodeList,
+    masternode_list: *mut types::MasternodeListFFI,
     context: *const c_void,
 ) -> bool;
 
@@ -48,8 +48,8 @@ pub fn lookup_masternode_list<MNL, MND>(
     masternode_list_destroy: MND,
 ) -> Option<models::MasternodeList>
 where
-    MNL: Fn(UInt256) -> *mut types::MasternodeList + Copy,
-    MND: Fn(*mut types::MasternodeList),
+    MNL: Fn(UInt256) -> *mut types::MasternodeListFFI + Copy,
+    MND: Fn(*mut types::MasternodeListFFI),
 {
     let lookup_result = masternode_list_lookup(block_hash);
     if !lookup_result.is_null() {

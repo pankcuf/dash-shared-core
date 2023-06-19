@@ -1,9 +1,9 @@
 use byte::ctx::Endian;
 use byte::{BytesExt, TryRead, LE};
+use dash_spv_ffi::boxed;
 use std::ptr::null_mut;
 use crate::consensus;
 use crate::crypto::{UInt256, UInt768};
-use crate::ffi::boxer::boxed;
 use crate::types::transaction::Transaction;
 
 #[repr(C)]
