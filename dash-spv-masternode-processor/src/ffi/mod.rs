@@ -1,4 +1,3 @@
-pub mod boxer;
 pub mod callbacks;
 pub mod common;
 pub mod from;

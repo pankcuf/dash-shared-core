@@ -120,7 +120,7 @@ unsafe extern "C" fn get_block_height_by_hash(
 
 pub unsafe extern "C" fn masternode_list_save_119064(
     block_hash: *mut [u8; 32],
-    masternode_list: *mut types::MasternodeList,
+    masternode_list: *mut types::MasternodeListFFI,
     context: *const std::ffi::c_void,
 ) -> bool {
     let ctx = &mut *(context as *mut FFIContext);

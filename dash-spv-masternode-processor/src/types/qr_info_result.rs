@@ -1,17 +1,20 @@
 use std::ptr::null_mut;
-use crate::processing::ProcessingError;
+use dash_spv_ffi::{boxed, FFIConversion};
+use dash_spv_macro_derive::ffi_conversion;
+use crate::processing::{QRInfoResult, ProcessingError};
 use crate::types;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
-pub struct QRInfoResult {
+#[ffi_conversion(QRInfoResult)]
+pub struct QRInfoResultFFI {
     pub error_status: ProcessingError,
-    pub result_at_tip: *mut types::MNListDiffResult,
-    pub result_at_h: *mut types::MNListDiffResult,
-    pub result_at_h_c: *mut types::MNListDiffResult,
-    pub result_at_h_2c: *mut types::MNListDiffResult,
-    pub result_at_h_3c: *mut types::MNListDiffResult,
-    pub result_at_h_4c: *mut types::MNListDiffResult,
+    pub result_at_tip: *mut types::MNListDiffResultFFI,
+    pub result_at_h: *mut types::MNListDiffResultFFI,
+    pub result_at_h_c: *mut types::MNListDiffResultFFI,
+    pub result_at_h_2c: *mut types::MNListDiffResultFFI,
+    pub result_at_h_3c: *mut types::MNListDiffResultFFI,
+    pub result_at_h_4c: *mut types::MNListDiffResultFFI,
 
     pub snapshot_at_h_c: *mut types::LLMQSnapshot,
     pub snapshot_at_h_2c: *mut types::LLMQSnapshot,
@@ -22,11 +25,11 @@ pub struct QRInfoResult {
     pub last_quorum_per_index_count: usize,
     pub quorum_snapshot_list: *mut *mut types::LLMQSnapshot,
     pub quorum_snapshot_list_count: usize,
-    pub mn_list_diff_list: *mut *mut types::MNListDiffResult,
+    pub mn_list_diff_list: *mut *mut types::MNListDiffResultFFI,
     pub mn_list_diff_list_count: usize,
 }
 
-impl Default for QRInfoResult {
+impl Default for QRInfoResultFFI {
     fn default() -> Self {
         Self {
             error_status: ProcessingError::None,
@@ -51,7 +54,7 @@ impl Default for QRInfoResult {
     }
 }
 
-impl QRInfoResult {
+impl QRInfoResultFFI {
     pub fn default_with_error(error: ProcessingError) -> Self {
         Self { error_status: error, ..Default::default() }
     }

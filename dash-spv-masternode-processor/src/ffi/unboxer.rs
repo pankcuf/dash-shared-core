@@ -1,28 +1,13 @@
 #![allow(unused_variables)]
 #![allow(dead_code)]
-
+use dash_spv_ffi::{unbox_any, unbox_vec, unbox_vec_ptr};
 use std::ffi::CString;
 use std::os::raw::c_char;
 use crate::types;
 use crate::types::opaque_key::{OpaqueKey, OpaqueKeys, OpaqueSerializedKeys};
 
 /// # Safety
-pub unsafe fn unbox_any<T: ?Sized>(any: *mut T) -> Box<T> {
-    Box::from_raw(any)
-}
-
-/// # Safety
-pub unsafe fn unbox_vec<T>(vec: Vec<*mut T>) -> Vec<Box<T>> {
-    vec.iter().map(|&x| unbox_any(x)).collect()
-}
-
-/// # Safety
-pub unsafe fn unbox_vec_ptr<T>(ptr: *mut T, count: usize) -> Vec<T> {
-    Vec::from_raw_parts(ptr, count, count)
-}
-
-/// # Safety
-pub unsafe fn unbox_masternode_entry(x: *mut types::MasternodeEntry) {
+pub unsafe fn unbox_masternode_entry(x: *mut types::MasternodeEntryFFI) {
     let entry = unbox_any(x);
     unbox_any(entry.confirmed_hash);
     if !entry
@@ -80,7 +65,7 @@ pub unsafe fn unbox_llmq_map(x: *mut types::LLMQMap) {
 }
 
 /// # Safety
-pub unsafe fn unbox_masternode_list(list: *mut types::MasternodeList) {
+pub unsafe fn unbox_masternode_list(list: *mut types::MasternodeListFFI) {
     let masternode_list = unbox_any(list);
     unbox_any(masternode_list.block_hash);
     if !masternode_list.masternode_merkle_root.is_null() {
@@ -114,7 +99,7 @@ pub unsafe fn unbox_quorums_cl_sigs_vec(vec: Vec<*mut types::QuorumsCLSigsObject
 }
 
 /// # Safety
-pub unsafe fn unbox_masternode_vec(vec: Vec<*mut types::MasternodeEntry>) {
+pub unsafe fn unbox_masternode_vec(vec: Vec<*mut types::MasternodeEntryFFI>) {
     for &x in vec.iter() {
         unbox_masternode_entry(x);
     }
@@ -165,7 +150,7 @@ pub unsafe fn unbox_snapshot_vec(vec: Vec<*mut types::LLMQSnapshot>) {
 }
 
 /// # Safety
-pub unsafe fn unbox_mn_list_diff_result_vec(vec: Vec<*mut types::MNListDiffResult>) {
+pub unsafe fn unbox_mn_list_diff_result_vec(vec: Vec<*mut types::MNListDiffResultFFI>) {
     for &x in vec.iter() {
         unbox_mn_list_diff_result(x);
     }
@@ -261,7 +246,7 @@ pub unsafe fn unbox_coinbase_tx(result: *mut types::CoinbaseTransaction) {
 }
 
 /// # Safety
-pub unsafe fn unbox_mn_list_diff_result(result: *mut types::MNListDiffResult) {
+pub unsafe fn unbox_mn_list_diff_result(result: *mut types::MNListDiffResultFFI) {
     let res = unbox_any(result);
     if !res.base_block_hash.is_null() {
         unbox_any(res.base_block_hash);
@@ -305,7 +290,7 @@ pub unsafe fn unbox_mn_list_diff_result(result: *mut types::MNListDiffResult) {
 }
 
 /// # Safety
-pub unsafe fn unbox_qr_info_result(result: *mut types::QRInfoResult) {
+pub unsafe fn unbox_qr_info_result(result: *mut types::QRInfoResultFFI) {
     let res = unbox_any(result);
     if !res.result_at_tip.is_null() {
         unbox_mn_list_diff_result(res.result_at_tip);

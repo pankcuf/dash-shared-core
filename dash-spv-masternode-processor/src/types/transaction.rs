@@ -1,8 +1,8 @@
 use byte::ctx::Endian;
 use byte::{BytesExt, TryRead, LE};
+use dash_spv_ffi::{boxed, boxed_vec};
 use std::ptr::null_mut;
 use crate::consensus;
-use crate::ffi::boxer::{boxed, boxed_vec};
 use crate::tx::{TransactionType, TX_UNCONFIRMED};
 use crate::types::{TransactionInput, TransactionOutput};
 

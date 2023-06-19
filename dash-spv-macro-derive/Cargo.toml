@@ -1,0 +1,13 @@
+[package]
+name = "dash-spv-macro-derive"
+version = "0.1.0"
+description = "Macros for boilerplate"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = "1.0.109"
+#syn = "2.0.18"
+quote = "1.0.28"

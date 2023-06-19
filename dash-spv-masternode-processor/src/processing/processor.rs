@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
 use std::ptr::null;
+use dash_spv_ffi::boxed;
 use crate::{common, models, types};
 use crate::chain::common::{ChainType, IHaveChainSettings, LLMQParams, LLMQType};
 use crate::crypto::{byte_util::{Reversable, Zeroable}, UInt256};
-use crate::ffi::boxer::boxed;
 use crate::ffi::callbacks;
 use crate::ffi::callbacks::{AddInsightBlockingLookup, GetBlockHashByHeight, GetBlockHeightByHash, GetLLMQSnapshotByBlockHash, HashDestroy, LLMQSnapshotDestroy, MasternodeListDestroy, MasternodeListLookup, MasternodeListSave, MerkleRootLookup, SaveLLMQSnapshot, ShouldProcessDiffWithRange};
 use crate::ffi::to::ToFFI;
@@ -129,7 +129,7 @@ impl MasternodeProcessor {
         is_dip_0024: bool,
         is_rotated_quorums_presented: bool,
         cache: &mut MasternodeProcessorCache,
-    ) -> types::MNListDiffResult {
+    ) -> types::MNListDiffResultFFI {
         let base_block_hash = list_diff.base_block_hash;
         //println!("get base list: find_masternode_list for {}: {}", list_diff.base_block_height, base_block_hash);
 
@@ -166,7 +166,7 @@ impl MasternodeProcessor {
         is_dip_0024: bool,
         is_rotated_quorums_presented: bool,
         cache: &mut MasternodeProcessorCache,
-    ) -> types::MNListDiffResult {
+    ) -> types::MNListDiffResultFFI {
         let result = self.get_list_diff_result_internal(base_list, list_diff, should_process_quorums, is_dip_0024, is_rotated_quorums_presented, cache);
         // println!("get_list_diff_result: {:#?}", result);
         result.encode()
@@ -767,7 +767,7 @@ impl MasternodeProcessor {
             |h: UInt256| unsafe {
                 (self.get_masternode_list_by_block_hash)(boxed(h.0), self.opaque_context)
             },
-            |list: *mut types::MasternodeList| unsafe { (self.destroy_masternode_list)(list) },
+            |list: *mut types::MasternodeListFFI| unsafe { (self.destroy_masternode_list)(list) },
         )
     }
 

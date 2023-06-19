@@ -339,7 +339,7 @@ pub mod tests {
         }
     }
 
-    pub fn process_mnlistdiff(bytes: Vec<u8>, processor: *mut MasternodeProcessor, context: &mut FFIContext, version: u32, use_insight: bool, is_from_snapshot: bool) -> types::MNListDiffResult {
+    pub fn process_mnlistdiff(bytes: Vec<u8>, processor: *mut MasternodeProcessor, context: &mut FFIContext, version: u32, use_insight: bool, is_from_snapshot: bool) -> types::MNListDiffResultFFI {
         unsafe {
             *process_mnlistdiff_from_message(
                 bytes.as_ptr(),
@@ -355,7 +355,7 @@ pub mod tests {
         }
     }
 
-    pub fn process_qrinfo(bytes: Vec<u8>, processor: *mut MasternodeProcessor, context: &mut FFIContext, version: u32, use_insight: bool, is_from_snapshot: bool) -> types::QRInfoResult {
+    pub fn process_qrinfo(bytes: Vec<u8>, processor: *mut MasternodeProcessor, context: &mut FFIContext, version: u32, use_insight: bool, is_from_snapshot: bool) -> types::QRInfoResultFFI {
         unsafe {
             *process_qrinfo_from_message(
                 bytes.as_ptr(),
@@ -379,7 +379,7 @@ pub mod tests {
         get_file_as_byte_vec(&filepath)
     }
 
-    pub fn assert_diff_result(context: &mut FFIContext, result: types::MNListDiffResult) {
+    pub fn assert_diff_result(context: &mut FFIContext, result: types::MNListDiffResultFFI) {
         let masternode_list = unsafe { (*result.masternode_list).decode() };
         //print!("block_hash: {} ({})", masternode_list.block_hash, masternode_list.block_hash.reversed());
         let bh = context.block_for_hash(masternode_list.block_hash).unwrap().height;
@@ -392,7 +392,7 @@ pub mod tests {
         println!("Diff is ok at {}", bh);
     }
 
-    pub fn assert_qrinfo_result(context: &mut FFIContext, result: types::QRInfoResult) {
+    pub fn assert_qrinfo_result(context: &mut FFIContext, result: types::QRInfoResultFFI) {
         if result.mn_list_diff_list_count > 0 {
             let diff_result = unsafe { **result.mn_list_diff_list };
             assert_diff_result(context, diff_result);
@@ -475,14 +475,14 @@ pub mod tests {
     pub unsafe extern "C" fn get_masternode_list_by_block_hash_default(
         _block_hash: *mut [u8; 32],
         _context: *const std::ffi::c_void,
-    ) -> *mut types::MasternodeList {
+    ) -> *mut types::MasternodeListFFI {
         null_mut()
     }
 
     pub unsafe extern "C" fn get_masternode_list_by_block_hash_from_cache(
         block_hash: *mut [u8; 32],
         context: *const std::ffi::c_void,
-    ) -> *mut types::MasternodeList {
+    ) -> *mut types::MasternodeListFFI {
         let h = UInt256(*(block_hash));
         let data: &mut FFIContext = &mut *(context as *mut FFIContext);
         //println!("get_masternode_list_by_block_hash_from_cache: {}", h);
@@ -499,14 +499,14 @@ pub mod tests {
 
     pub unsafe extern "C" fn masternode_list_save_default(
         _block_hash: *mut [u8; 32],
-        _masternode_list: *mut types::MasternodeList,
+        _masternode_list: *mut types::MasternodeListFFI,
         _context: *const std::ffi::c_void,
     ) -> bool {
         true
     }
     pub unsafe extern "C" fn masternode_list_save_in_cache(
         block_hash: *mut [u8; 32],
-        masternode_list: *mut types::MasternodeList,
+        masternode_list: *mut types::MasternodeListFFI,
         context: *const std::ffi::c_void,
     ) -> bool {
         let h = UInt256(*(block_hash));
@@ -519,7 +519,7 @@ pub mod tests {
     }
 
     pub unsafe extern "C" fn masternode_list_destroy_default(
-        _masternode_list: *mut types::MasternodeList,
+        _masternode_list: *mut types::MasternodeListFFI,
     ) {
     }
     pub unsafe extern "C" fn hash_destroy_default(_hash: *mut u8) {}

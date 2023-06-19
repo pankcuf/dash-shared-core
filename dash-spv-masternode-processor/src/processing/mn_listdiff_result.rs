@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
+use dash_spv_ffi::{boxed, boxed_vec};
 use crate::{models, types};
 use crate::chain::common;
 use crate::crypto::UInt256;
-use crate::ffi::boxer::{boxed, boxed_vec};
 use crate::ffi::to::{encode_masternodes_map, encode_quorums_map, ToFFI};
 use crate::processing::ProcessingError;
 
@@ -77,8 +77,8 @@ impl MNListDiffResult {
 }
 
 impl MNListDiffResult {
-    pub fn encode(&self) -> types::MNListDiffResult {
-        types::MNListDiffResult {
+    pub fn encode(&self) -> types::MNListDiffResultFFI {
+        types::MNListDiffResultFFI {
             error_status: self.error_status.into(),
             base_block_hash: boxed(self.base_block_hash.0),
             block_hash: boxed(self.block_hash.0),

@@ -56,7 +56,7 @@ unsafe extern "C" fn get_block_hash_by_height_chacha(
 pub unsafe extern "C" fn get_masternode_list_at_9192(
     block_hash: *mut [u8; 32],
     context: *const std::ffi::c_void,
-) -> *mut types::MasternodeList {
+) -> *mut types::MasternodeListFFI {
     let h = UInt256(*(block_hash));
     let nodes = BTreeMap::new();
     let quorums = BTreeMap::new();
@@ -143,7 +143,7 @@ unsafe extern "C" fn get_block_hash_by_height_mojito(
 pub unsafe extern "C" fn get_masternode_list_mojito(
     block_hash: *mut [u8; 32],
     context: *const std::ffi::c_void,
-) -> *mut types::MasternodeList {
+) -> *mut types::MasternodeListFFI {
     null_mut()
     // let h = UInt256(*(block_hash));
     // let nodes = BTreeMap::new();

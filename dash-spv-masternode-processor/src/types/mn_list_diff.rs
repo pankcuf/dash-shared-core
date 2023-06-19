@@ -1,6 +1,6 @@
 use crate::types::coinbase_transaction::CoinbaseTransaction;
 use crate::types::llmq_entry::LLMQEntry;
-use crate::types::masternode_entry::MasternodeEntry;
+use crate::types::masternode_entry::MasternodeEntryFFI;
 use crate::types::LLMQTypedHash;
 
 #[repr(C)]
@@ -22,7 +22,7 @@ pub struct MNListDiff {
     pub deleted_masternode_hashes: *mut *mut [u8; 32],
 
     pub added_or_modified_masternodes_count: usize,
-    pub added_or_modified_masternodes: *mut *mut MasternodeEntry,
+    pub added_or_modified_masternodes: *mut *mut MasternodeEntryFFI,
 
     pub deleted_quorums_count: usize,
     pub deleted_quorums: *mut *mut LLMQTypedHash,

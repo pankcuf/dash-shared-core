@@ -50,21 +50,50 @@ pub trait BytesDecodable<'a, T: TryRead<'a, Endian>> {
 
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[dash_spv_macro_derive::ffi_conversion("[u8; 16]")]
 pub struct UInt128(pub [u8; 16]);
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[dash_spv_macro_derive::ffi_conversion("[u8; 20]")]
 pub struct UInt160(pub [u8; 20]);
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[dash_spv_macro_derive::ffi_conversion("[u8; 32]")]
 pub struct UInt256(pub [u8; 32]);
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[dash_spv_macro_derive::ffi_conversion("[u8; 48]")]
 pub struct UInt384(pub [u8; 48]);
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[dash_spv_macro_derive::ffi_conversion("[u8; 64]")]
 pub struct UInt512(pub [u8; 64]);
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[dash_spv_macro_derive::ffi_conversion("[u8; 96]")]
 pub struct UInt768(pub [u8; 96]);
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ECPoint(pub [u8; 33]);
 
+// #[macro_export]
+// macro_rules! impl_ffi_conversion {
+//     ($var_type: ident, $byte_len: expr) => {
+//         impl dash_spv_ffi::FFIConversion<$var_type> for [u8; $byte_len] {
+//             unsafe fn ffi_from(ffi: *mut Self) -> $var_type {
+//                 $var_type(*ffi)
+//             }
+//
+//             unsafe fn ffi_to(obj: $var_type) -> *mut Self {
+//                 dash_spv_ffi::boxed(obj.0)
+//             }
+//         }
+//         impl dash_spv_ffi::FFIConversion<Option<$var_type>> for [u8; $byte_len] {
+//             unsafe fn ffi_from(ffi: *mut Self) -> Option<$var_type> {
+//                 (!ffi.is_null()).then_some($var_type(*ffi))
+//             }
+//
+//             unsafe fn ffi_to(obj: Option<$var_type>) -> *mut Self {
+//                 obj.map_or(std::ptr::null_mut(), |obj| dash_spv_ffi::boxed(obj.0))
+//             }
+//         }
+//     }
+// }
 
 #[macro_export]
 macro_rules! impl_ffi_bytearray {
@@ -230,6 +259,7 @@ macro_rules! define_bytes_to_big_uint {
         impl_decodable!($uint_type, $byte_len);
         define_try_from_bytes!($uint_type);
         impl_ffi_bytearray!($uint_type);
+        // impl_ffi_conversion!($uint_type, $byte_len);
         #[cfg(feature = "generate-dashj-tests")]
         define_serde_big_uint!($uint_type);
 

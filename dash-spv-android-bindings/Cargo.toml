@@ -4,9 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-#libc = "0.2.139"
-rs-dapi-client = { git = "https://github.com/pankcuf/rs-dapi-client", branch = "feat/bindings" }
+dash-spv-ffi = { path = "../dash-spv-ffi" }
+dash-spv-macro-derive = { path = "../dash-spv-macro-derive" }
 dash-spv-masternode-processor = { path = "../dash-spv-masternode-processor" }
+
+rs-dapi-client = { git = "https://github.com/pankcuf/rs-dapi-client", branch = "feat/bindings" }
+
 tonic = "0.9.2"
 tokio = "1.28.2"
 

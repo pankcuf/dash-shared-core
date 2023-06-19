@@ -1,8 +1,8 @@
 use byte::ctx::Endian;
 use byte::{BytesExt, TryRead, LE};
+use dash_spv_ffi::{boxed, boxed_vec};
 use std::ptr::null_mut;
 use crate::crypto::{UInt256, VarBytes};
-use crate::ffi::boxer::{boxed, boxed_vec};
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]

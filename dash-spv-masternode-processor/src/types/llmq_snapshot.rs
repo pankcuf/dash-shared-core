@@ -1,9 +1,9 @@
 use byte::ctx::{Bytes, Endian};
 use byte::{BytesExt, TryRead, LE};
+use dash_spv_ffi::boxed_vec;
 use crate::common::LLMQSnapshotSkipMode;
 use crate::consensus::encode;
 use crate::crypto::byte_util::BytesDecodable;
-use crate::ffi::boxer::boxed_vec;
 use crate::impl_bytes_decodable;
 
 #[repr(C)]

@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
 use std::ptr::null_mut;
+use dash_spv_ffi::{boxed, boxed_vec};
 use crate::{common, models, tx, types};
 use crate::chain::common::LLMQType;
 use crate::crypto::UInt256;
-use crate::ffi::boxer::{boxed, boxed_vec};
 use crate::ffi::from::FromFFI;
 
 pub trait ToFFI {
@@ -113,7 +113,7 @@ impl ToFFI for tx::CoinbaseTransaction {
 }
 
 impl ToFFI for models::MasternodeList {
-    type Item = types::MasternodeList;
+    type Item = types::MasternodeListFFI;
 
     fn encode(&self) -> Self::Item {
         Self::Item {
@@ -138,7 +138,7 @@ impl ToFFI for models::MasternodeList {
 }
 
 impl ToFFI for models::MasternodeEntry {
-    type Item = types::MasternodeEntry;
+    type Item = types::MasternodeEntryFFI;
 
     fn encode(&self) -> Self::Item {
         let previous_operator_public_keys_count = self.previous_operator_public_keys.len();
@@ -356,7 +356,7 @@ pub fn encode_quorums_map(
 
 pub fn encode_masternodes_map(
     masternodes: &BTreeMap<UInt256, models::MasternodeEntry>,
-) -> *mut *mut types::MasternodeEntry {
+) -> *mut *mut types::MasternodeEntryFFI {
     boxed_vec(
         masternodes
             .iter()
