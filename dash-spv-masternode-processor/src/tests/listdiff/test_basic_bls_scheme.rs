@@ -292,7 +292,7 @@ fn test_legacy_basic_conversion() {
     let bk1 = UInt384::from_hex("158367af44572fbd35b475ca6259e1c499eefcbd5573ded52917c45cd2c8a0aa2e4ac9fd25ecdf1ef548750d2caf3ee3").unwrap();
     // println!("{}", UInt384(*G1Element::from_bytes(&bk1.0).unwrap().serialize_legacy()));
     // println!("{}", UInt384(*G1Element::from_bytes(&bk1.0).unwrap().serialize()));
-    println!("{}", UInt384(*G1Element::from_bytes_legacy(&bk1.0).unwrap().serialize()));
+    println!("{}", UInt384(*G1Element::from_bytes_legacy(&bk1.0).unwrap().to_bytes()));
     println!("{}", UInt384(*G1Element::from_bytes_legacy(&bk1.0).unwrap().serialize_legacy()));
 
 

@@ -60,10 +60,10 @@ fn test_bls_multiplication() {
 #[test]
 fn test_bls_from_bip32_short_seed() {
     let private_key = PrivateKey::from_bip32_seed(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-    println!("{:?}", &*private_key.serialize());
-    println!("{:?}", &*private_key.serialize().as_slice());
+    println!("{:?}", &*private_key.to_bytes());
+    println!("{:?}", &*private_key.to_bytes().as_slice());
     assert_eq!(
-        private_key.serialize().as_slice(),
+        private_key.to_bytes().as_slice(),
         Vec::from_hex("46891c2cec49593c81921e473db7480029e0fc1eb933c6b93d81f5370eb19fbd").unwrap().as_slice(),
         "----");
 }

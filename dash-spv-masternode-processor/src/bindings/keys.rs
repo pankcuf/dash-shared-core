@@ -530,7 +530,7 @@ pub unsafe extern "C" fn key_bls_chaincode(key: *mut BLSKey) -> ByteArray {
 #[no_mangle]
 pub unsafe extern "C" fn key_bls_serialize(key: *mut BLSKey, legacy: bool) -> ByteArray {
     (&*key).bls_public_key()
-        .map(|key| UInt384(*if legacy { key.serialize_legacy() } else { key.serialize() }))
+        .map(|key| UInt384(*if legacy { key.serialize_legacy() } else { key.to_bytes() }))
         .ok()
         .into()
 

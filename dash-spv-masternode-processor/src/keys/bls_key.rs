@@ -41,7 +41,7 @@ impl BLSKey {
                     .ok()
                     .map(|bls_public_key| Self {
                         seckey,
-                        pubkey: UInt384(*if use_legacy { bls_public_key.serialize_legacy() } else { bls_public_key.serialize() }),
+                        pubkey: UInt384(*if use_legacy { bls_public_key.serialize_legacy() } else { bls_public_key.to_bytes() }),
                         use_legacy,
                         ..Default::default()
                     })))
@@ -54,7 +54,7 @@ impl BLSKey {
     pub fn product(&self, public_key: &BLSKey) -> Option<[u8; 48]> {
         match (self.bls_private_key(), public_key.bls_public_key(), self.use_legacy) {
             (Ok(priv_key), Ok(pub_key), use_legacy) if public_key.use_legacy == use_legacy =>
-                (priv_key * pub_key).map(|pk| if use_legacy { *pk.serialize_legacy() } else { *pk.serialize() }).ok(),
+                (priv_key * pub_key).map(|pk| if use_legacy { *pk.serialize_legacy() } else { *pk.to_bytes() }).ok(),
             _ => None
         }
     }
@@ -193,11 +193,11 @@ impl BLSKey {
     pub fn key_with_seed_data(seed: &[u8], use_legacy: bool) -> Self {
         let bls_private_key = PrivateKey::from_bip32_seed(seed);
         let bls_public_key = bls_private_key.g1_element().unwrap();
-        let seckey = UInt256::from(&*bls_private_key.serialize());
+        let seckey = UInt256::from(&*bls_private_key.to_bytes());
         let pubkey = UInt384(*if use_legacy {
             bls_public_key.serialize_legacy()
         } else {
-            bls_public_key.serialize()
+            bls_public_key.to_bytes()
         });
         Self { seckey, pubkey, use_legacy, ..Default::default() }
     }
@@ -213,7 +213,7 @@ impl BLSKey {
         let public_key_data = if use_legacy {
             bls_public_key.serialize_legacy()
         } else {
-            bls_public_key.serialize()
+            bls_public_key.to_bytes()
         };
         Self {
             extended_private_key_data: SecVec::new(),
@@ -253,9 +253,9 @@ impl BLSKey {
         let bls_public_key_bytes = if use_legacy {
             bls_public_key.serialize_legacy()
         } else {
-            bls_public_key.serialize()
+            bls_public_key.to_bytes()
         };
-        if let Some(seckey) = UInt256::from_bytes(bls_private_key.serialize().as_slice(), &mut 0) {
+        if let Some(seckey) = UInt256::from_bytes(bls_private_key.to_bytes().as_slice(), &mut 0) {
             Some(Self {
                 extended_private_key_data: SecVec::with_vec(extended_private_key_data.to_vec()),
                 extended_public_key_data: extended_public_key_data.to_vec(),
@@ -374,7 +374,7 @@ impl BLSKey {
     pub(crate) fn bls_public_key_serialized(&self) -> Option<[u8; 48]> {
         self.bls_public_key()
             .ok()
-            .map(|pk| if self.use_legacy { *pk.serialize_legacy() } else { *pk.serialize() })
+            .map(|pk| if self.use_legacy { *pk.serialize_legacy() } else { *pk.to_bytes() })
     }
 
     pub fn public_key_uint(&self) -> UInt384 {
@@ -399,7 +399,7 @@ impl BLSKey {
             let signature = if self.use_legacy {
                 LegacySchemeMPL::new().sign(&bls_private_key, &hash).serialize_legacy()
             } else {
-                BasicSchemeMPL::new().sign(&bls_private_key, &hash).serialize()
+                BasicSchemeMPL::new().sign(&bls_private_key, &hash).to_bytes()
             };
             UInt768(*signature)
         } else {
@@ -415,7 +415,7 @@ impl BLSKey {
             let signature = if self.use_legacy {
                 LegacySchemeMPL::new().sign(&bls_private_key, &message).serialize_legacy()
             } else {
-                BasicSchemeMPL::new().sign(&bls_private_key, &message).serialize()
+                BasicSchemeMPL::new().sign(&bls_private_key, &message).to_bytes()
             };
             UInt768(*signature)
         } else {
@@ -430,7 +430,7 @@ impl BLSKey {
             let bls_signature = if self.use_legacy {
                 LegacySchemeMPL::new().sign(&bls_private_key, md.as_bytes()).serialize_legacy()
             } else {
-                BasicSchemeMPL::new().sign(&bls_private_key, md.as_bytes()).serialize()
+                BasicSchemeMPL::new().sign(&bls_private_key, md.as_bytes()).to_bytes()
             };
             UInt768(*bls_signature)
         } else {
@@ -565,7 +565,7 @@ impl DHKey for BLSKey {
                 (bls_private_key * bls_public_key)
                     .ok()
                     .map(|key|
-                        BLSKey::key_with_public_key(UInt384(if use_legacy { *key.serialize_legacy() } else { *key.serialize() }), use_legacy)),
+                        BLSKey::key_with_public_key(UInt384(if use_legacy { *key.serialize_legacy() } else { *key.to_bytes() }), use_legacy)),
             _ => None
         }
     }
