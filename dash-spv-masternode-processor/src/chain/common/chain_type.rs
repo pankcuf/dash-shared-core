@@ -379,6 +379,10 @@ impl ChainType {
         }
     }
 
+    pub fn use_legacy_bls(&self) -> bool {
+        self.protocol_version() >= 70225
+    }
+
     pub fn standard_port(&self) -> u16 {
         match self {
             ChainType::MainNet => 9999,

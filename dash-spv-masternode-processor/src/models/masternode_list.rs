@@ -1,6 +1,9 @@
 use std::cmp::min;
 use std::collections::BTreeMap;
-use crate::common::{LLMQType, MasternodeType};
+use crate::chain::common::LLMQType;
+use crate::common::MasternodeType;
+use crate::consensus::Encodable;
+use crate::crypto::{byte_util::{Reversable, Zeroable}, UInt256};
 use crate::models::{LLMQEntry, MasternodeEntry};
 use crate::tx::CoinbaseTransaction;
 use crate::util::data_ops::merkle_root_from_hashes;

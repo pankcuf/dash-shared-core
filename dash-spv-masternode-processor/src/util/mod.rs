@@ -31,6 +31,9 @@ pub use self::address::address::is_valid_dash_private_key;
 pub use self::address::address::shapeshift_outbound_for_script;
 pub use self::address::address::shapeshift_outbound_force_script;
 pub use self::address::address::with_script_sig;
+pub use self::error::Error;
+pub use self::shared::Shared;
+pub use self::time::TimeUtil;
 
 pub use self::error::Error;
 pub use self::shared::Shared;

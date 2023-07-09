@@ -5,7 +5,8 @@ use std::convert::Into;
 use serde::ser::SerializeStruct;
 #[cfg(feature = "generate-dashj-tests")]
 use serde::{Serialize, Serializer};
-use crate::common::{LLMQType, LLMQVersion};
+use crate::chain::common::LLMQType;
+use crate::common::LLMQVersion;
 use crate::consensus::{encode::VarInt, Encodable, WriteExt};
 use crate::crypto::{byte_util::AsBytes, data_ops::Data, UInt256, UInt384, UInt768};
 use crate::keys::BLSKey;

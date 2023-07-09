@@ -1,4 +1,4 @@
-use crate::common::ChainType;
+use crate::chain::common::ChainType;
 use crate::lib_tests::tests::{assert_diff_result, assert_qrinfo_result, create_default_context, message_from_file, process_mnlistdiff, process_qrinfo, register_cache, register_default_processor, register_logger};
 
 // #[test]

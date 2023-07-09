@@ -1,7 +1,9 @@
 use std::fs::File;
-use std::io;
-use std::io::Write;
-use serde::Serialize;
+use std::{fs, fs::OpenOptions, io, io::{Read, Write}};
+use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+use serde::{de, Serialize};
+use crate::environment::Environment;
+
 
 pub fn create_file(name: &str) -> io::Result<File> { // "processor.log"
     let cache_path = match dirs_next::cache_dir() {
@@ -26,13 +28,6 @@ pub fn save_java_class(name: &str, contents: &[u8]) -> io::Result<()> {
     create_file(name)
         .and_then(|mut out| out.write(contents).map(|_| ()))
 }
-use std::{fs, io};
-use std::fs::OpenOptions;
-use std::io::Read;
-use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
-use serde::de;
-use crate::environment::Environment;
-
 
 /////////////////
 fn resource_filepath(name: impl AsRef<str>) -> impl AsRef<str> {

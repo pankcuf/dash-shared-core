@@ -1,5 +1,4 @@
-use crate::chain::common::chain_type::DevnetType;
-use crate::common::ChainType;
+use crate::chain::common::{ChainType, DevnetType};
 use crate::lib_tests::tests::{assert_diff_result, create_default_context, MerkleBlock, message_from_file, process_mnlistdiff, register_cache, register_default_processor, register_logger};
 
 // #[test]
