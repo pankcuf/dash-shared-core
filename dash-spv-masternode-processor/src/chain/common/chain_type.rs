@@ -396,7 +396,6 @@ impl ChainType {
     pub fn standard_dapi_jrpc_port(&self) -> u16 { 3000 }
 
     pub fn localhost(&self) -> SocketAddr {
-        // SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::from(0x7f000001), self.standard_port()))
         SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::from(0x7f000001), 0))
     }
 

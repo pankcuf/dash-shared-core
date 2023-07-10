@@ -1,6 +1,6 @@
 [package]
 name = "dash-spv-masternode-processor"
-version = "0.4.8"
+version = "0.4.9"
 description = "Library for processing masternodes and quorums (SPV)"
 
 edition = "2021"
@@ -47,7 +47,7 @@ murmur3 = "0.5.2"
 os-timer = "1.0.10"
 plist = "1.4.1"
 reachability = { path = "../reachability" }
-rs-x11-hash = "0.1.4"
+rs-x11-hash = "0.1.8"
 secp256k1 = { version = "0.26.0", features = [ "recovery", "rand-std", "bitcoin_hashes" ] }
 security-framework = "2.8.2"
 serde = { version = "1.0.144", features = ["derive"] }
