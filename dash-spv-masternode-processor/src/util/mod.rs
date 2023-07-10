@@ -7,9 +7,6 @@ pub mod ecdsa;
 pub mod endian;
 pub mod error;
 pub mod file;
-pub mod java;
-#[cfg(feature = "generate-dashj-tests")]
-pub mod file;
 #[cfg(feature = "generate-dashj-tests")]
 pub mod java;
 pub mod key;
@@ -35,11 +32,5 @@ pub use self::error::Error;
 pub use self::shared::Shared;
 pub use self::time::TimeUtil;
 
-pub use self::error::Error;
-pub use self::shared::Shared;
-pub use self::time::TimeUtil;
-
-#[cfg(feature = "generate-dashj-tests")]
 pub use self::file::create_file;
-#[cfg(feature = "generate-dashj-tests")]
 pub use self::file::save_json_file;

@@ -4,6 +4,7 @@ pub mod tests {
     extern crate libc;
     extern crate reqwest;
     use byte::BytesExt;
+    use dash_spv_ffi::{boxed, unbox_any};
     use hashes::hex::{FromHex, ToHex};
     use serde::{Deserialize, Serialize};
     use std::io::Read;
@@ -11,10 +12,8 @@ pub mod tests {
     use std::{env, fs, slice};
     use crate::bindings::common::{processor_create_cache, register_processor, register_rust_logger};
     use crate::bindings::masternode::{process_mnlistdiff_from_message, process_qrinfo_from_message};
-    use crate::ffi::boxer::boxed;
     use crate::ffi::from::FromFFI;
     use crate::ffi::to::ToFFI;
-    use crate::ffi::unboxer::unbox_any;
     use crate::chain::common::chain_type::{ChainType, IHaveChainSettings};
     use crate::consensus::encode;
     use crate::crypto::byte_util::{BytesDecodable, Reversable, UInt256, UInt384};
@@ -339,7 +338,7 @@ pub mod tests {
         }
     }
 
-    pub fn process_mnlistdiff(bytes: Vec<u8>, processor: *mut MasternodeProcessor, context: &mut FFIContext, protocol_version: u32, use_insight: bool, is_from_snapshot: bool) -> types::MNListDiffResult {
+    pub fn process_mnlistdiff(bytes: Vec<u8>, processor: *mut MasternodeProcessor, context: &mut FFIContext, protocol_version: u32, use_insight: bool, is_from_snapshot: bool) -> types::MNListDiffResultFFI {
         unsafe {
             *process_mnlistdiff_from_message(
                 bytes.as_ptr(),

@@ -1,7 +1,7 @@
 use byte::BytesExt;
 use hashes::hex::ToHex;
 use std::collections::BTreeMap;
-use crate::common::LLMQType;
+use crate::chain::common::LLMQType;
 use crate::chain::constants::{CORE_PROTO_20, CORE_PROTO_BLS_BASIC};
 use crate::consensus::encode::VarInt;
 use crate::crypto::byte_util::{BytesDecodable, Reversable};

@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::ptr::null_mut;
 use bls_signatures::G1Element;
+use dash_spv_ffi::boxed;
 use hashes::hex::{FromHex, ToHex};
 use crate::{models, types};
 use crate::bindings::common::{processor_create_cache, register_processor};
@@ -8,7 +9,6 @@ use crate::bindings::masternode::process_mnlistdiff_from_message;
 use crate::chain::common::{ChainType, DevnetType};
 use crate::crypto::{UInt256, UInt384};
 use crate::crypto::byte_util::Zeroable;
-use crate::ffi::boxer::boxed;
 use crate::ffi::to::ToFFI;
 use crate::keys::BLSKey;
 use crate::lib_tests::tests::{add_insight_lookup_default, assert_diff_result, FFIContext, get_block_height_by_hash_from_context, get_block_hash_by_height_from_context, get_llmq_snapshot_by_block_hash_default, get_merkle_root_by_hash_default, hash_destroy_default, masternode_list_destroy_default, masternode_list_save_in_cache, MerkleBlock, message_from_file, save_llmq_snapshot_in_cache, should_process_diff_with_range_default, snapshot_destroy_default, register_logger};

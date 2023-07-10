@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use std::ptr::null_mut;
 use crate::chain::{ScriptMap, derivation::{IIndexPath, IndexPath}};
 use crate::crypto::{UInt256, UInt384, UInt768};
-use crate::keys::{BLSKey, ECDSAKey, ED25519Key, IKey};
+use crate::keys::{BLSKey, CryptoData, DHKey, ECDSAKey, ED25519Key, IKey};
 use crate::types::opaque_key::{AsOpaqueKey, OpaqueKey};
 use crate::util::sec_vec::SecVec;
 

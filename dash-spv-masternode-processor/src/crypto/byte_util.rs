@@ -50,22 +50,22 @@ pub trait BytesDecodable<'a, T: TryRead<'a, Endian>> {
 
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[dash_spv_macro_derive::ffi_conversion("[u8; 16]")]
+// #[dash_spv_macro_derive::ffi_conversion("[u8; 16]")]
 pub struct UInt128(pub [u8; 16]);
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[dash_spv_macro_derive::ffi_conversion("[u8; 20]")]
+// #[dash_spv_macro_derive::ffi_conversion("[u8; 20]")]
 pub struct UInt160(pub [u8; 20]);
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[dash_spv_macro_derive::ffi_conversion("[u8; 32]")]
+// #[dash_spv_macro_derive::ffi_conversion("[u8; 32]")]
 pub struct UInt256(pub [u8; 32]);
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[dash_spv_macro_derive::ffi_conversion("[u8; 48]")]
+// #[dash_spv_macro_derive::ffi_conversion("[u8; 48]")]
 pub struct UInt384(pub [u8; 48]);
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[dash_spv_macro_derive::ffi_conversion("[u8; 64]")]
+// #[dash_spv_macro_derive::ffi_conversion("[u8; 64]")]
 pub struct UInt512(pub [u8; 64]);
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[dash_spv_macro_derive::ffi_conversion("[u8; 96]")]
+// #[dash_spv_macro_derive::ffi_conversion("[u8; 96]")]
 pub struct UInt768(pub [u8; 96]);
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

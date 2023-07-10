@@ -3,7 +3,6 @@ use std::ffi::CString;
 use std::os::raw::{c_char, c_void};
 use std::ptr::null_mut;
 use bls_signatures::BlsError;
-use crate::ffi::boxer::boxed;
 use crate::keys::{BLSKey, ECDSAKey, ED25519Key, KeyKind};
 
 pub trait AsOpaqueKey {
