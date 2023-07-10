@@ -1,6 +1,6 @@
 [package]
 name = "dash_spv_apple_bindings"
-version = "0.4.7"
+version = "0.4.8"
 description = "C-bindings for using and interoperating with Dash SPV"
 readme = "README.md"
 edition = "2021"

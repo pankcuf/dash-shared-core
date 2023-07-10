@@ -1,6 +1,6 @@
 [package]
 name = "dash-spv-masternode-processor"
-version = "0.4.7"
+version = "0.4.8"
 description = "Library for processing masternodes and quorums (SPV)"
 
 edition = "2021"
