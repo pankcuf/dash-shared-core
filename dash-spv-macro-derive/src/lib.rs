@@ -472,12 +472,12 @@ fn map_idents(field_name: &Ident) -> (Ident, Ident, Ident) {
     (format_ident!("{}_count", field_name), format_ident!("{}_keys", field_name), format_ident!("{}_values", field_name))
 }
 
+
+
 fn convert_map_to_var(field_name: &Ident, path_keys: &Path, path_values: &Path) -> Box<dyn ToTokens> {
     let (field_name_count, field_name_keys, field_name_values) = map_idents(field_name);
     let converted_field_value_keys = convert_path_to_field_type(path_keys);
     let converted_field_value_values = convert_path_to_field_type(path_values);
-    // println!("convert_map_to_var: {:?} {:?} {:?}", field_name, path_keys, path_values);
-
     let count_definition = define_field(quote!(pub #field_name_count), quote!(usize));
     let keys_definition = define_field(quote!(pub #field_name_keys), quote!(*mut #converted_field_value_keys));
     let values_definition = define_field(quote!(pub #field_name_values), quote!(*mut #converted_field_value_values));
@@ -677,7 +677,7 @@ fn from_enum_variant(variant: &Variant, _index: usize) -> TokenStream2 {
                                     PathArguments::AngleBracketed(args) => {
                                         match &args.args.iter().collect::<Vec<_>>()[..] {
                                             // BTreeMap / HashMap
-                                            [GenericArgument::Type(Type::Path(type_keys)), GenericArgument::Type(Type::Path(type_values)), ..] => {
+                                            [GenericArgument::Type(Type::Path(type_keys)), GenericArgument::Type(Type::Path(type_values))] => {
                                                 let field_value_keys = &type_keys.path.segments.last().unwrap().ident;
                                                 let field_value_values = &type_values.path.segments.last().unwrap().ident;
                                                 quote!(*mut *mut #field_value_keys, *mut *mut #field_value_values, usize)
