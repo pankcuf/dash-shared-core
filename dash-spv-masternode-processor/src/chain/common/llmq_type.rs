@@ -289,6 +289,7 @@ pub const LLMQ_DEV_PLATFORM: LLMQParams = LLMQParams {
 #[warn(non_camel_case_types)]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Hash, Ord)]
+#[dash_spv_macro_derive::impl_ffi_conv]
 pub enum LLMQType {
     LlmqtypeUnknown = 0,    // other kind of
     Llmqtype50_60 = 1,      // 50 members,  30  (60%) threshold, 24 / day

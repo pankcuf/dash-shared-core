@@ -29,6 +29,7 @@ pub trait IHaveChainSettings {
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
+#[dash_spv_macro_derive::impl_ffi_conv]
 pub enum ChainType {
     #[default]
     MainNet,
@@ -57,6 +58,7 @@ impl From<ChainType> for i16 {
 }
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
+#[dash_spv_macro_derive::impl_ffi_conv]
 pub enum DevnetType {
     JackDaniels = 0,
     Devnet333 = 1,
@@ -609,3 +611,4 @@ impl ChainType {
         600
     }
 }
+

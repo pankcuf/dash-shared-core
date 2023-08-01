@@ -105,7 +105,6 @@ impl IChildKeyDerivationData<UInt256, SigningKey, UInt256> for ED25519Key {
     fn private_key_data_input<PATH>(key: &SigningKey, path: &PATH, position: usize) -> Vec<u8> where PATH: IIndexPath<Item=UInt256> {
         let index = path.index_at_position(position);
         let is_hardened = path.hardened_at_position(position);
-
         let i_is_31_bits = index.is_31_bits();
         let mut writer = Vec::<u8>::new();
         if is_hardened {

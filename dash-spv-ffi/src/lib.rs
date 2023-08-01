@@ -1,33 +1,62 @@
 use std::ffi::{CStr, CString};
 use std::mem;
 use std::os::raw::c_char;
+use std::ptr::null_mut;
 
-pub trait FFIConversion<T> {
+// pub trait FFIConversion<T> {
+//     unsafe fn ffi_from(ffi: *mut Self) -> T;
+//     unsafe fn ffi_to(obj: T) -> *mut Self;
+// }
+// impl FFIConversion<String> for c_char {
+//     unsafe fn ffi_from(ffi: *mut Self) -> String {
+//         let c_str = CStr::from_ptr(ffi);
+//         let s = c_str.to_str().unwrap();
+//         s.to_string()
+//     }
+//
+//     unsafe fn ffi_to(obj: String) -> *mut Self {
+//         CString::new(obj).unwrap().into_raw()
+//     }
+// }
+//
+// impl FFIConversion<Vec<u8>> for [u8; 32] {
+//     unsafe fn ffi_from(ffi: *mut Self) -> Vec<u8> {
+//         (*ffi).to_vec()
+//     }
+//
+//     unsafe fn ffi_to(obj: Vec<u8>) -> *mut Self {
+//         convert_vec_to_fixed_array(&obj)
+//     }
+// }
+//
+
+// #[dash_spv_macro_derive::impl_syn_extension]
+pub trait FFIConv<T> {
     unsafe fn ffi_from(ffi: *mut Self) -> T;
     unsafe fn ffi_to(obj: T) -> *mut Self;
+    unsafe fn ffi_from_opt(ffi: *mut Self) -> Option<T>;
+    unsafe fn ffi_to_opt(obj: Option<T>) -> *mut Self;
 }
 
-impl FFIConversion<String> for c_char {
+impl FFIConv<String> for c_char {
     unsafe fn ffi_from(ffi: *mut Self) -> String {
-        let c_str = CStr::from_ptr(ffi);
-        let s = c_str.to_str().unwrap();
-        s.to_string()
+        CStr::from_ptr(ffi).to_str().unwrap().to_string()
     }
 
     unsafe fn ffi_to(obj: String) -> *mut Self {
         CString::new(obj).unwrap().into_raw()
     }
-}
 
-impl FFIConversion<Vec<u8>> for [u8; 32] {
-    unsafe fn ffi_from(ffi: *mut Self) -> Vec<u8> {
-        (*ffi).to_vec()
+    unsafe fn ffi_from_opt(ffi: *mut Self) -> Option<String> {
+        (!ffi.is_null())
+            .then_some(<Self as FFIConv<String>>::ffi_from(ffi))
     }
 
-    unsafe fn ffi_to(obj: Vec<u8>) -> *mut Self {
-        convert_vec_to_fixed_array(&obj)
+    unsafe fn ffi_to_opt(obj: Option<String>) -> *mut Self {
+        obj.map_or(null_mut(), |o| <Self as FFIConv<String>>::ffi_to(o))
     }
 }
+
 
 pub fn boxed<T>(obj: T) -> *mut T {
     Box::into_raw(Box::new(obj))
@@ -60,3 +89,4 @@ pub fn convert_vec_to_fixed_array<const N: usize>(data: &Vec<u8>) -> *mut [u8; N
     fixed_array.copy_from_slice(data);
     boxed(fixed_array)
 }
+

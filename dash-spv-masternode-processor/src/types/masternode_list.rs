@@ -1,9 +1,7 @@
-use dash_spv_ffi::FFIConversion;
 use crate::types;
-use crate::models::MasternodeList;
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
-#[dash_spv_macro_derive::ffi_conversion(MasternodeList)]
+// #[dash_spv_macro_derive::ffi_conversion(MasternodeList)]
 pub struct MasternodeListFFI {
     pub block_hash: *mut [u8; 32],
     pub known_height: u32,

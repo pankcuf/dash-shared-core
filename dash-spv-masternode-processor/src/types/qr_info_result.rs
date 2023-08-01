@@ -1,12 +1,10 @@
 use std::ptr::null_mut;
-use dash_spv_ffi::{boxed, FFIConversion};
-use dash_spv_macro_derive::ffi_conversion;
-use crate::processing::{QRInfoResult, ProcessingError};
+use crate::processing::ProcessingError;
 use crate::types;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
-#[ffi_conversion(QRInfoResult)]
+// #[ffi_conversion(QRInfoResult)]
 pub struct QRInfoResultFFI {
     pub error_status: ProcessingError,
     pub result_at_tip: *mut types::MNListDiffResultFFI,

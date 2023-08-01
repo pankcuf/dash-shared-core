@@ -1,6 +1,7 @@
 use crate::crypto::UInt256;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
+#[dash_spv_macro_derive::impl_ffi_conv]
 pub struct Block {
     pub height: u32,
     pub hash: UInt256,
@@ -19,3 +20,4 @@ impl Block {
         Self { height, hash }
     }
 }
+

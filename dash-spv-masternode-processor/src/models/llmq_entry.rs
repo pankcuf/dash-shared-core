@@ -1,31 +1,35 @@
-use byte::{BytesExt, ctx::{Bytes, Endian}, TryRead, LE};
-use hashes::hex::ToHex;
-use std::convert::Into;
-#[cfg(feature = "generate-dashj-tests")]
-use serde::ser::SerializeStruct;
-#[cfg(feature = "generate-dashj-tests")]
-use serde::{Serialize, Serializer};
 use crate::chain::common::LLMQType;
 use crate::common::LLMQVersion;
 use crate::consensus::{encode::VarInt, Encodable, WriteExt};
 use crate::crypto::{byte_util::AsBytes, data_ops::Data, UInt256, UInt384, UInt768};
 use crate::keys::BLSKey;
 use crate::models;
+use byte::{
+    ctx::{Bytes, Endian},
+    BytesExt, TryRead, LE,
+};
+use hashes::hex::ToHex;
+#[cfg(feature = "generate-dashj-tests")]
+use serde::ser::SerializeStruct;
+#[cfg(feature = "generate-dashj-tests")]
+use serde::{Serialize, Serializer};
+use std::convert::Into;
 
 #[derive(Clone, Ord, PartialOrd, PartialEq, Eq)]
+#[dash_spv_macro_derive::impl_ffi_conv]
 pub struct LLMQEntry {
-    pub version: LLMQVersion,
+    pub version: crate::common::llmq_version::LLMQVersion,
     pub llmq_hash: UInt256,
     pub index: Option<u16>,
     pub public_key: UInt384,
     pub threshold_signature: UInt768,
     pub verification_vector_hash: UInt256,
     pub all_commitment_aggregated_signature: UInt768,
-    pub llmq_type: LLMQType,
+    pub llmq_type: crate::chain::common::llmq_type::LLMQType,
     pub signers_bitset: Vec<u8>,
-    pub signers_count: VarInt,
+    pub signers_count: crate::consensus::encode::VarInt,
     pub valid_members_bitset: Vec<u8>,
-    pub valid_members_count: VarInt,
+    pub valid_members_count: crate::consensus::encode::VarInt,
     pub entry_hash: UInt256,
     pub verified: bool,
     pub saved: bool,
@@ -34,8 +38,12 @@ pub struct LLMQEntry {
 
 #[cfg(feature = "generate-dashj-tests")]
 impl Serialize for LLMQEntry {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> where S: Serializer {
-        let mut state = serializer.serialize_struct("LLMQEntry", 10 + usize::from(self.index.is_some()))?;
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state =
+            serializer.serialize_struct("LLMQEntry", 10 + usize::from(self.index.is_some()))?;
         state.serialize_field("version", &self.version)?;
         if let Some(index) = self.index {
             state.serialize_field("index", &index)?;
@@ -43,14 +51,16 @@ impl Serialize for LLMQEntry {
         state.serialize_field("public_key", &self.public_key)?;
         state.serialize_field("threshold_signature", &self.threshold_signature)?;
         state.serialize_field("verification_vector_hash", &self.verification_vector_hash)?;
-        state.serialize_field("all_commitment_aggregated_signature", &self.all_commitment_aggregated_signature)?;
+        state.serialize_field(
+            "all_commitment_aggregated_signature",
+            &self.all_commitment_aggregated_signature,
+        )?;
         state.serialize_field("llmq_type", &self.llmq_type)?;
         state.serialize_field("signers_bitset", &self.signers_bitset.to_hex())?;
         state.serialize_field("signers_count", &self.signers_count.0)?;
         state.serialize_field("valid_members_bitset", &self.valid_members_bitset.to_hex())?;
         state.serialize_field("valid_members_count", &self.valid_members_count.0)?;
         state.end()
-
     }
 }
 
@@ -70,11 +80,17 @@ impl std::fmt::Debug for LLMQEntry {
             .field("public_key", &self.public_key)
             .field("threshold_signature", &self.threshold_signature)
             .field("verification_vector_hash", &self.verification_vector_hash)
-            .field("all_commitment_aggregated_signature", &self.all_commitment_aggregated_signature)
+            .field(
+                "all_commitment_aggregated_signature",
+                &self.all_commitment_aggregated_signature,
+            )
             .field("llmq_type", &self.llmq_type)
             .field("signers_bitset", &VecHex(self.signers_bitset.clone()))
             .field("signers_count", &self.signers_count)
-            .field("valid_members_bitset", &VecHex(self.valid_members_bitset.clone()))
+            .field(
+                "valid_members_bitset",
+                &VecHex(self.valid_members_bitset.clone()),
+            )
             .field("valid_members_count", &self.valid_members_count)
             .field("entry_hash", &self.entry_hash)
             .field("verified", &self.verified)
@@ -118,7 +134,7 @@ impl<'a> TryRead<'a, Endian> for LLMQEntry {
             public_key,
             verification_vector_hash,
             threshold_signature,
-            all_commitment_aggregated_signature
+            all_commitment_aggregated_signature,
         );
         Ok((entry, *offset))
     }
@@ -341,8 +357,11 @@ impl LLMQEntry {
 }
 
 impl LLMQEntry {
-
-    pub fn verify(&mut self, valid_masternodes: Vec<models::MasternodeEntry>, block_height: u32) -> bool {
+    pub fn verify(
+        &mut self,
+        valid_masternodes: Vec<models::MasternodeEntry>,
+        block_height: u32,
+    ) -> bool {
         if !self.validate_payload() {
             return false;
         }
@@ -350,36 +369,59 @@ impl LLMQEntry {
         self.verified
     }
 
-    pub fn validate(&mut self, valid_masternodes: Vec<models::MasternodeEntry>, block_height: u32) -> bool {
+    pub fn validate(
+        &mut self,
+        valid_masternodes: Vec<models::MasternodeEntry>,
+        block_height: u32,
+    ) -> bool {
         let commitment_hash = self.generate_commitment_hash();
         let use_legacy = self.version.use_bls_legacy();
 
         let operator_keys = valid_masternodes
             .iter()
             .enumerate()
-            .filter_map(|(i, node)| self.signers_bitset.as_slice().bit_is_true_at_le_index(i as u32)
-                .then_some(node.operator_public_key_at(block_height)))
+            .filter_map(|(i, node)| {
+                self.signers_bitset
+                    .as_slice()
+                    .bit_is_true_at_le_index(i as u32)
+                    .then_some(node.operator_public_key_at(block_height))
+            })
             .collect::<Vec<_>>();
         // info!("let operator_keys = vec![{:?}];", operator_keys);
         let all_commitment_aggregated_signature_validated = BLSKey::verify_secure_aggregated(
             commitment_hash,
             self.all_commitment_aggregated_signature,
             operator_keys,
-            use_legacy);
+            use_legacy,
+        );
         if !all_commitment_aggregated_signature_validated {
             // warn!("••• Issue with all_commitment_aggregated_signature_validated: {}", self.all_commitment_aggregated_signature);
-            println!("••• INVALID AGGREGATED SIGNATURE {}: {:?} ({})", block_height, self.llmq_type, self.all_commitment_aggregated_signature);
+            println!(
+                "••• INVALID AGGREGATED SIGNATURE {}: {:?} ({})",
+                block_height, self.llmq_type, self.all_commitment_aggregated_signature
+            );
             return false;
         }
         // The sig must validate against the commitmentHash and all public keys determined by the signers bitvector.
         // This is an aggregated BLS signature verification.
-        let quorum_signature_validated = BLSKey::verify_quorum_signature(commitment_hash.as_bytes(), self.threshold_signature.as_bytes(), self.public_key.as_bytes(), use_legacy);
+        let quorum_signature_validated = BLSKey::verify_quorum_signature(
+            commitment_hash.as_bytes(),
+            self.threshold_signature.as_bytes(),
+            self.public_key.as_bytes(),
+            use_legacy,
+        );
         if !quorum_signature_validated {
-            println!("••• INVALID QUORUM SIGNATURE {}: {:?} ({})", block_height, self.llmq_type, self.threshold_signature);
+            println!(
+                "••• INVALID QUORUM SIGNATURE {}: {:?} ({})",
+                block_height, self.llmq_type, self.threshold_signature
+            );
             // warn!("••• Issue with quorum_signature_validated");
             return false;
         }
-        println!("••• quorum {:?} validated at {}", self.llmq_type, block_height);
+        println!(
+            "••• quorum {:?} validated at {}",
+            self.llmq_type, block_height
+        );
         true
     }
 }

@@ -1,12 +1,11 @@
-use dash_spv_ffi::{boxed, boxed_vec, FFIConversion};
-use dash_spv_macro_derive::ffi_conversion;
+// use dash_spv_macro_derive::ffi_conversion;
 use std::ptr::null_mut;
-use crate::processing::{MNListDiffResult, ProcessingError};
+use crate::processing::ProcessingError;
 use crate::types;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
-#[ffi_conversion(MNListDiffResult)]
+// #[ffi_conversion(MNListDiffResult)]
 pub struct MNListDiffResultFFI {
     pub error_status: ProcessingError,
     pub base_block_hash: *mut [u8; 32],

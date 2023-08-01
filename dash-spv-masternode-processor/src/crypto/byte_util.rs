@@ -1,5 +1,5 @@
-use byte::{BytesExt, ctx::Endian, LE, Result, TryRead, TryWrite};
 use std::{io::Write, mem, net::{IpAddr, Ipv4Addr}, slice};
+use byte::{BytesExt, ctx::Endian, LE, Result, TryRead, TryWrite};
 use ed25519_dalek::{SigningKey, VerifyingKey};
 use hashes::{Hash, hash160, HashEngine, Hmac, HmacEngine, ripemd160, sha1, sha256, sha256d, sha512};
 use secp256k1::rand::{Rng, thread_rng};
@@ -50,50 +50,31 @@ pub trait BytesDecodable<'a, T: TryRead<'a, Endian>> {
 
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-// #[dash_spv_macro_derive::ffi_conversion("[u8; 16]")]
+#[dash_spv_macro_derive::impl_ffi_conv]
 pub struct UInt128(pub [u8; 16]);
+
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-// #[dash_spv_macro_derive::ffi_conversion("[u8; 20]")]
+#[dash_spv_macro_derive::impl_ffi_conv]
 pub struct UInt160(pub [u8; 20]);
+
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-// #[dash_spv_macro_derive::ffi_conversion("[u8; 32]")]
+#[dash_spv_macro_derive::impl_ffi_conv]
 pub struct UInt256(pub [u8; 32]);
+
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-// #[dash_spv_macro_derive::ffi_conversion("[u8; 48]")]
+#[dash_spv_macro_derive::impl_ffi_conv]
 pub struct UInt384(pub [u8; 48]);
+
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-// #[dash_spv_macro_derive::ffi_conversion("[u8; 64]")]
+#[dash_spv_macro_derive::impl_ffi_conv]
 pub struct UInt512(pub [u8; 64]);
+
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-// #[dash_spv_macro_derive::ffi_conversion("[u8; 96]")]
+#[dash_spv_macro_derive::impl_ffi_conv]
 pub struct UInt768(pub [u8; 96]);
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ECPoint(pub [u8; 33]);
-
-// #[macro_export]
-// macro_rules! impl_ffi_conversion {
-//     ($var_type: ident, $byte_len: expr) => {
-//         impl dash_spv_ffi::FFIConversion<$var_type> for [u8; $byte_len] {
-//             unsafe fn ffi_from(ffi: *mut Self) -> $var_type {
-//                 $var_type(*ffi)
-//             }
-//
-//             unsafe fn ffi_to(obj: $var_type) -> *mut Self {
-//                 dash_spv_ffi::boxed(obj.0)
-//             }
-//         }
-//         impl dash_spv_ffi::FFIConversion<Option<$var_type>> for [u8; $byte_len] {
-//             unsafe fn ffi_from(ffi: *mut Self) -> Option<$var_type> {
-//                 (!ffi.is_null()).then_some($var_type(*ffi))
-//             }
-//
-//             unsafe fn ffi_to(obj: Option<$var_type>) -> *mut Self {
-//                 obj.map_or(std::ptr::null_mut(), |obj| dash_spv_ffi::boxed(obj.0))
-//             }
-//         }
-//     }
-// }
 
 #[macro_export]
 macro_rules! impl_ffi_bytearray {

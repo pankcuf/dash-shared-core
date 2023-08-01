@@ -6,6 +6,7 @@ use crate::crypto::byte_util::BytesDecodable;
 
 #[repr(u16)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Hash, Ord)]
+#[dash_spv_macro_derive::impl_ffi_conv]
 pub enum MasternodeType {
     Regular = 0,
     HighPerformance = 1,
@@ -64,3 +65,30 @@ impl<'a> BytesDecodable<'a, MasternodeType> for MasternodeType {
         bytes.read_with::<MasternodeType>(offset, byte::LE).ok()
     }
 }
+
+// #[repr(C)] #[derive(Clone, Copy, Debug)]
+// pub enum MasternodeTypeFFI {
+//     Regular = 0,
+//     HighPerformance = 1,
+// }
+
+// impl dash_spv_ffi ::FFIConv < MasternodeType > for MasternodeTypeFFI {
+//     unsafe fn ffi_from(ffi : * mut MasternodeTypeFFI) -> MasternodeType {
+//         match *ffi {
+//             MasternodeTypeFFI::Regular => MasternodeType::Regular,
+//             MasternodeTypeFFI::HighPerformance => MasternodeType::HighPerformance,
+//         }
+//     }
+//     unsafe fn ffi_to(obj : MasternodeType) -> * mut MasternodeTypeFFI {
+//         dash_spv_ffi ::boxed(match obj {
+//             MasternodeType::Regular => MasternodeTypeFFI::Regular,
+//             MasternodeType::HighPerformance => MasternodeTypeFFI::HighPerformance,
+//         })
+//     }
+//     unsafe fn ffi_from_opt(ffi : * mut MasternodeTypeFFI) -> Option <MasternodeType > {
+//         (!ffi.is_null()).then_some(< Self as dash_spv_ffi :: FFIConv <MasternodeType >> :: ffi_from(ffi))
+//     }
+//     unsafe fn ffi_to_opt(obj : Option < MasternodeType >) -> * mut MasternodeTypeFFI {
+//         obj.map_or(std :: ptr :: null_mut(), | o | < Self as dash_spv_ffi ::FFIConv < MasternodeType >> :: ffi_to(o))
+//     }
+// }
