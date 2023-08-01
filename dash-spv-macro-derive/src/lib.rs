@@ -481,7 +481,7 @@ fn convert_map_to_var(field_name: &Ident, path_keys: &Path, path_values: &Path) 
     let field_name_count = format_ident!("{}_count", field_name);
     let converted_field_value_keys = convert_path_to_field_type(path_keys);
     let converted_field_value_values = convert_path_to_field_type(path_values);
-    println!("convert_map_to_var: {:?} {:?} {:?}", field_name, path_keys, path_values);
+    // println!("convert_map_to_var: {:?} {:?} {:?}", field_name, path_keys, path_values);
 
     let count_definition = define_field(quote!(pub #field_name_count), quote!(usize));
     let keys_definition = define_field(quote!(pub #field_name_keys), quote!(*mut #converted_field_value_keys));
@@ -600,7 +600,6 @@ fn from_unnamed_struct(fields: &FieldsUnnamed, target_name: Ident, input: &Deriv
                 quote!(#target_name),
                 quote!(#target_name(#ffi_deref.0)),
                 package_boxed_expression(quote!(#ffi_name(#obj.0))),
-                // quote!(#obj.0),
             )
         },
         Type::Array(ffi_name) => {
@@ -623,28 +622,21 @@ fn from_unnamed_struct(fields: &FieldsUnnamed, target_name: Ident, input: &Deriv
 
 fn from_named_struct(fields: &FieldsNamed, target_name: Ident, input: &DeriveInput) -> TokenStream {
     let ffi_name = input.ident.clone();
-    // println!("from_named_struct: {:?} {:?} {:?}", fields, target_name, input);
-    let (conversions_to_ffi, conversions_from_ffi, struct_fields) = (
-        fields.named.iter().map(|f| match &f.ty {
-            Type::Ptr(type_ptr) => to_ptr(f, type_ptr),
-            Type::Array(type_array) => to_arr(f, type_array),
-            Type::Path(type_path) => to_path(f, type_path, None),
-        _ => panic!("to_struct: Unknown field {:?}", f.ident),
-        }).collect::<Vec<_>>(),
-        fields.named.iter().map(|f| {
-            let field_name = &f.ident;
-            match &f.ty {
-                Type::Ptr(type_ptr) => from_ptr(f, type_ptr),
-                Type::Path(type_path) => from_path(f, type_path, None),
-                _ => Box::new(define_field(quote!(#field_name), ffi_deref_field_name(quote!(#field_name)))),
-            }
-        }).collect::<Vec<_>>(),
-            fields.named.iter().map(|f| {
-                extract_struct_field(f)
-            }).collect::<Vec<_>>()
-     );
-
-
+    let conversions_to_ffi = fields.named.iter().map(|f| match &f.ty {
+        Type::Ptr(type_ptr) => to_ptr(f, type_ptr),
+        Type::Array(type_array) => to_arr(f, type_array),
+        Type::Path(type_path) => to_path(f, type_path, None),
+        _ => panic!("from_named_struct: Unknown field {:?}", f.ident),
+    }).collect::<Vec<_>>();
+    let conversions_from_ffi = fields.named.iter().map(|f| {
+        let field_name = &f.ident;
+        match &f.ty {
+            Type::Ptr(type_ptr) => from_ptr(f, type_ptr),
+            Type::Path(type_path) => from_path(f, type_path, None),
+            _ => Box::new(define_field(quote!(#field_name), ffi_deref_field_name(quote!(#field_name)))),
+        }
+    }).collect::<Vec<_>>();
+    let struct_fields = fields.named.iter().map(|f| extract_struct_field(f)).collect::<Vec<_>>();
     let ffi_name = ffi_struct_name(&ffi_name);
     let ffi_struct = quote! {
         #[repr(C)]
