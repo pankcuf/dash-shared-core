@@ -129,7 +129,7 @@ fn to_vec(path: &Path, field_name: &Ident) -> TokenStream2 {
     return quote!(#field_count, #field)
 }
 
-fn from_path(f: &Field, type_path: &TypePath, _type_ptr: Option<&TypePtr>) -> Box<dyn ToTokens> {
+fn from_path(f: &Field, type_path: &TypePath, _type_ptr: Option<&TypePtr>) -> TokenStream2 {
     let path = &type_path.path;
     let last_segment = path.segments.last().unwrap();
     let field_name = &f.ident.clone().unwrap();
@@ -137,7 +137,7 @@ fn from_path(f: &Field, type_path: &TypePath, _type_ptr: Option<&TypePtr>) -> Bo
     let ffi_deref = ffi_deref();
     let ffi_field_name_quote = ffi_deref_field_name(quote!(#field_name));
     let field_type = &last_segment.ident;
-    Box::new(match field_type.to_string().as_str() {
+    match field_type.to_string().as_str() {
         "i8" | "u8" | "i16" | "u16" |
         "i32" | "u32" | "i64" | "u64" |
         "i128" | "u128" | "isize" | "usize" | "bool" => define_field(field_name_quote, ffi_field_name_quote),
@@ -238,16 +238,16 @@ fn from_path(f: &Field, type_path: &TypePath, _type_ptr: Option<&TypePtr>) -> Bo
             }
         },
         _ => define_field(field_name_quote, ffi_from_conversion(ffi_field_name_quote))
-    })
+    }
 }
 
-fn from_ptr(f: &Field, type_ptr: &TypePtr) -> Box<dyn ToTokens> {
+fn from_ptr(f: &Field, type_ptr: &TypePtr) -> TokenStream2 {
     let field_name = &f.ident;
     let field_name_quote = quote!(#field_name);
     match &*type_ptr.elem {
         Type::Ptr(type_ptr) => from_ptr(f, type_ptr),
         Type::Path(type_path) => from_path(f, type_path, Some(type_ptr)),
-        _ => Box::new(define_field(field_name_quote.clone(), ffi_from_conversion(ffi_deref_field_name(field_name_quote.clone())))),
+        _ => define_field(field_name_quote.clone(), ffi_from_conversion(ffi_deref_field_name(field_name_quote.clone())))
     }
 }
 
@@ -335,13 +335,13 @@ fn define_option(field_name: &Ident, arguments: &PathArguments) -> TokenStream2 
     }
 }
 
-fn to_path(f: &Field, type_path: &TypePath, _type_ptr: Option<&TypePtr>) -> Box<dyn ToTokens> {
+fn to_path(f: &Field, type_path: &TypePath, _type_ptr: Option<&TypePtr>) -> TokenStream2 {
     let field_name = &f.ident.clone().unwrap();
     let field_name_quote = quote!(#field_name);
     let obj_field_name_quote = obj_field_name(field_name_quote.clone());
     let path = &type_path.path;
     let last_segment = path.segments.last().unwrap();
-    Box::new(match last_segment.ident.to_string().as_str() {
+    match last_segment.ident.to_string().as_str() {
         "i8" | "u8" | "i16" | "u16" |
         "i32" | "u32" | "i64" | "u64" |
         "i128" | "u128" | "isize" | "usize" | "bool" => define_field(field_name_quote, obj_field_name_quote),
@@ -351,13 +351,13 @@ fn to_path(f: &Field, type_path: &TypePath, _type_ptr: Option<&TypePtr>) -> Box<
         "BTreeMap" | "HashMap" => define_map(field_name, &last_segment.arguments),
         "Option" => define_option(field_name, &last_segment.arguments),
         _ => define_field( field_name_quote, ffi_to_conversion(obj_field_name_quote))
-    })
+    }
 }
 
-fn to_vec_ptr(f: &Field, _type_ptr: &TypePtr, _type_arr: &TypeArray) -> Box<dyn ToTokens> {
+fn to_vec_ptr(f: &Field, _type_ptr: &TypePtr, _type_arr: &TypeArray) -> TokenStream2 {
     let field_name = &f.ident;
     let expr = package_boxed_expression(quote!(o));
-    return Box::new(define_field(quote!(#field_name), package_boxed_vec_expression(iter_map_collect(obj_field_name(quote!(#field_name)), quote!(|o| #expr)))))
+    return define_field(quote!(#field_name), package_boxed_vec_expression(iter_map_collect(obj_field_name(quote!(#field_name)), quote!(|o| #expr))))
 }
 
 fn ffi_from_conversion(field_value: TokenStream2) -> TokenStream2 {
@@ -388,15 +388,15 @@ fn ffi_to_opt_conversion(field_value: TokenStream2) -> TokenStream2 {
     quote!(#package::#interface::#ffi_to_opt(#field_value))
 }
 
-fn to_field(field_name: &Ident) -> Box<dyn ToTokens> {
-    Box::new(define_field(quote!(#field_name), ffi_to_conversion(obj_field_name(quote!(#field_name)))))
+fn to_field(field_name: &Ident) -> TokenStream2 {
+    define_field(quote!(#field_name), ffi_to_conversion(obj_field_name(quote!(#field_name))))
 }
 
-fn to_opt_field(field_name: &Ident) -> Box<dyn ToTokens> {
-    Box::new(define_field(quote!(#field_name), ffi_to_opt_conversion(obj_field_name(quote!(#field_name)))))
+fn to_opt_field(field_name: &Ident) -> TokenStream2 {
+    define_field(quote!(#field_name), ffi_to_opt_conversion(obj_field_name(quote!(#field_name))))
 }
 
-fn to_ptr(f: &Field, type_ptr: &TypePtr) -> Box<dyn ToTokens> {
+fn to_ptr(f: &Field, type_ptr: &TypePtr) -> TokenStream2 {
     match &*type_ptr.elem {
         Type::Array(TypeArray { elem, .. }) => match &**elem {
             Type::Path(type_path) => to_path(f, type_path, Some(type_ptr)),
@@ -413,7 +413,7 @@ fn to_ptr(f: &Field, type_ptr: &TypePtr) -> Box<dyn ToTokens> {
     }
 }
 
-fn to_arr(f: &Field, _type_array: &TypeArray) -> Box<dyn ToTokens> {
+fn to_arr(f: &Field, _type_array: &TypeArray) -> TokenStream2 {
     let field_name = &f.ident.clone().unwrap();
     if let Type::Path(type_path) = &f.ty {
         if type_path.path.segments.last().unwrap().ident == "Option" {
@@ -464,8 +464,8 @@ fn ffi_struct_name(field_type: &Ident) -> Ident {
     format_ident!("{}FFI", field_type)
 }
 
-fn convert_struct_to_var(field_name: &Ident, path: &Path) -> Box<dyn ToTokens> {
-    Box::new(define_field(quote!(pub #field_name), convert_path_to_field_type(path)))
+fn convert_struct_to_var(field_name: &Ident, path: &Path) -> TokenStream2 {
+    define_field(quote!(pub #field_name), convert_path_to_field_type(path))
 }
 
 fn map_idents(field_name: &Ident) -> (Ident, Ident, Ident) {
@@ -474,17 +474,17 @@ fn map_idents(field_name: &Ident) -> (Ident, Ident, Ident) {
 
 
 
-fn convert_map_to_var(field_name: &Ident, path_keys: &Path, path_values: &Path) -> Box<dyn ToTokens> {
+fn convert_map_to_var(field_name: &Ident, path_keys: &Path, path_values: &Path) -> TokenStream2 {
     let (field_name_count, field_name_keys, field_name_values) = map_idents(field_name);
     let converted_field_value_keys = convert_path_to_field_type(path_keys);
     let converted_field_value_values = convert_path_to_field_type(path_values);
     let count_definition = define_field(quote!(pub #field_name_count), quote!(usize));
     let keys_definition = define_field(quote!(pub #field_name_keys), quote!(*mut #converted_field_value_keys));
     let values_definition = define_field(quote!(pub #field_name_values), quote!(*mut #converted_field_value_values));
-    Box::new(quote!(#count_definition, #keys_definition, #values_definition))
+    quote!(#count_definition, #keys_definition, #values_definition)
 }
 
-fn convert_vec_to_var(field: &Field) -> Box<dyn ToTokens> {
+fn convert_vec_to_var(field: &Field) -> TokenStream2 {
     let field_name = &field.ident.clone().unwrap();
     let field_type = &field.ty.clone();
     let converted_type = match field_type {
@@ -510,10 +510,10 @@ fn convert_vec_to_var(field: &Field) -> Box<dyn ToTokens> {
     let field_name_count = format_ident!("{}_count", field_name);
     let count_definition = define_field(quote!(pub #field_name_count), quote!(usize));
     let type_definition = define_field(quote!(pub #field_name), converted_type);
-    return Box::new(quote!(#count_definition, #type_definition));
+    quote!(#count_definition, #type_definition)
 }
 
-fn convert_path_arguments(field: &Field, path_args: &PathArguments) -> Box<dyn ToTokens> {
+fn convert_path_arguments(field: &Field, path_args: &PathArguments) -> TokenStream2 {
     let field_name = &field.ident.clone().unwrap();
     match &path_args {
         PathArguments::AngleBracketed(args) => {
@@ -533,7 +533,7 @@ fn convert_path_arguments(field: &Field, path_args: &PathArguments) -> Box<dyn T
 fn extract_struct_field(f: &Field) -> Box<dyn ToTokens> {
     let field_name = &f.ident.clone().unwrap();
     let field_type = &f.ty;
-    match field_type {
+    Box::new(match field_type {
         Type::Array(_type_arr) => convert_vec_to_var(f),
         Type::Path(type_path) => {
             let path = &type_path.path;
@@ -559,7 +559,7 @@ fn extract_struct_field(f: &Field) -> Box<dyn ToTokens> {
             }
         },
         _ => panic!("Can't extract struct field")
-    }
+    })
 }
 
 fn impl_interface(ffi_name: TokenStream2, target_name: TokenStream2, ffi_from_conversion: TokenStream2, ffi_to_conversion: TokenStream2) -> TokenStream2 {
@@ -625,11 +625,11 @@ fn from_named_struct(fields: &FieldsNamed, target_name: Ident, input: &DeriveInp
     }).collect::<Vec<_>>();
     let conversions_from_ffi = fields.named.iter().map(|f| {
         let field_name = &f.ident;
-        match &f.ty {
+        Box::new(match &f.ty {
             Type::Ptr(type_ptr) => from_ptr(f, type_ptr),
             Type::Path(type_path) => from_path(f, type_path, None),
-            _ => Box::new(define_field(quote!(#field_name), ffi_deref_field_name(quote!(#field_name)))),
-        }
+            _ => define_field(quote!(#field_name), ffi_deref_field_name(quote!(#field_name))),
+        })
     }).collect::<Vec<_>>();
     let struct_fields = fields.named.iter().map(|f| extract_struct_field(f)).collect::<Vec<_>>();
     let ffi_name = ffi_struct_name(&ffi_name);
@@ -652,7 +652,6 @@ fn from_named_struct(fields: &FieldsNamed, target_name: Ident, input: &DeriveInp
         #interface_impl
     };
     println!("{}", expanded);
-
     TokenStream::from(expanded)
 }
 
