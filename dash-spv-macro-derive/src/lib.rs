@@ -486,6 +486,7 @@ fn convert_map_to_var(field_name: &Ident, path_keys: &Path, path_values: &Path) 
     let (field_name_count, field_name_keys, field_name_values) = map_idents(field_name);
     let converted_field_value_keys = convert_path_to_field_type(path_keys);
     let converted_field_value_values = convert_path_to_field_type(path_values);
+    
     let count_definition = define_field(quote!(pub #field_name_count), quote!(usize));
     let keys_definition = define_field(quote!(pub #field_name_keys), quote!(*mut #converted_field_value_keys));
     let values_definition = define_field(quote!(pub #field_name_values), quote!(*mut #converted_field_value_values));
@@ -683,10 +684,10 @@ fn from_enum_variant(variant: &Variant, _index: usize) -> TokenStream2 {
                                                 quote!(*mut *mut #field_value_keys, *mut *mut #field_value_values, usize)
                                             },
                                             // [GenericArgument::Type(Type::Path(inner_path))] => convert_path_to_field_type(&inner_path.path),
-                                            _ => panic!("from_path: Unknown field {:?}", args)
+                                            _ => panic!("from_enum_variant: Unknown field {:?}", args)
                                         }
                                     }
-                                    _ => panic!("from_path: Unknown field")
+                                    _ => panic!("from_enum_variant: Unknown field")
                                 }
 
                             },
@@ -696,10 +697,10 @@ fn from_enum_variant(variant: &Variant, _index: usize) -> TokenStream2 {
                                         let args = &args.args.iter().collect::<Vec<_>>();
                                         match &args[..] {
                                             [GenericArgument::Type(Type::Path(inner_path))] => convert_path_to_field_type(&inner_path.path),
-                                            _ => panic!("from_path: Unknown field {:?}", args)
+                                            _ => panic!("from_enum_variant: Unknown field {:?}", args)
                                         }
                                     }
-                                    _ => panic!("from_path: Unknown field")
+                                    _ => panic!("from_enum_variant: Unknown field")
                                 }
                             },
                             _ => {
@@ -708,7 +709,7 @@ fn from_enum_variant(variant: &Variant, _index: usize) -> TokenStream2 {
                             }
                         }
                     },
-                    _ => panic!("Can't extract struct field")
+                    _ => panic!("from_enum_variant: Can't extract struct field")
                 }
             };
             let enum_fields = match &variant.fields {
