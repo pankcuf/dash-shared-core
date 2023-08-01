@@ -190,7 +190,7 @@ fn from_path(f: &Field, type_path: &TypePath, _type_ptr: Option<&TypePtr>) -> Bo
                                 let ffi_from_conversion = ffi_from_conversion(quote!(#field.add(i)));
                                 iter_map_collect(quote!((0..#count).into_iter()), quote!(|i| #ffi_from_conversion))
                             };
-                            return Box::new(define_field(quote!(#field_name), field_value))
+                            define_field(quote!(#field_name), field_value)
                         },
                         _ => panic!("from_path (vec): Unknown field {:?} {:?}", f.ident, args)
                     }
@@ -205,9 +205,7 @@ fn from_path(f: &Field, type_path: &TypePath, _type_ptr: Option<&TypePtr>) -> Bo
                     match &args[..] {
                         [GenericArgument::Type(Type::Path(inner_path_key)), GenericArgument::Type(Type::Path(inner_path_value))] => {
                             let ffi_deref_deref = quote!(*(#ffi_deref));
-                            let field_name_count = format_ident!("{}_count", field_name);
-                            let field_name_keys = format_ident!("{}_keys", field_name);
-                            let field_name_values = format_ident!("{}_values", field_name);
+                            let (field_name_count, field_name_keys, field_name_values) = map_idents(field_name);
 
                             let buffer_add_i = |buffer: Ident| quote!(#buffer.add(i));
                             let keys_add_i = buffer_add_i(field_name_keys);
@@ -289,18 +287,15 @@ fn define_map(field_name: &Ident, arguments: &PathArguments) -> TokenStream2 {
             let args = &args.args.iter().collect::<Vec<_>>();
             match &args[..] {
                 [GenericArgument::Type(Type::Path(inner_path_key)), GenericArgument::Type(Type::Path(inner_path_value))] => {
-                    let field_name_count = format_ident!("{}_count", field_name);
-                    let field_name_keys = format_ident!("{}_keys", field_name);
-                    let field_name_values = format_ident!("{}_values", field_name);
+                    let (field_name_count, field_name_keys, field_name_values) = map_idents(field_name);
                     let create_transformer = |path: &Path| {
-                        if should_use_direct_conversion(path) {
-                            quote!(|o| o)
+                        let conversion = if should_use_direct_conversion(path) {
+                            quote!(o)
                         } else {
-                            let conv = ffi_to_conversion(quote!(o));
-                            quote!(|o| #conv)
-                        }
+                            ffi_to_conversion(quote!(o))
+                        };
+                        quote!(|o| #conversion)
                     };
-
                     let count_field_definition = define_field(quote!(#field_name_count), quote!(#obj_field_name_quote.len()));
                     let keys_field_definition = define_field(quote!(#field_name_keys), package_boxed_vec_expression(iter_map_collect(quote!(#obj_field_name_quote.clone().into_keys()), create_transformer(&inner_path_key.path))));
                     let values_field_definition = define_field(quote!(#field_name_values), package_boxed_vec_expression(iter_map_collect(quote!(#obj_field_name_quote.clone().into_values()), create_transformer(&inner_path_value.path))));
@@ -308,7 +303,6 @@ fn define_map(field_name: &Ident, arguments: &PathArguments) -> TokenStream2 {
                 },
                 _ => panic!("to_path (map): Unknown field {:?} {:?}", field_name, args)
             }
-
         },
         _ => define_field(field_name_quote,obj_field_name_quote)
     }
@@ -474,11 +468,12 @@ fn convert_struct_to_var(field_name: &Ident, path: &Path) -> Box<dyn ToTokens> {
     Box::new(define_field(quote!(pub #field_name), convert_path_to_field_type(path)))
 }
 
+fn map_idents(field_name: &Ident) -> (Ident, Ident, Ident) {
+    (format_ident!("{}_count", field_name), format_ident!("{}_keys", field_name), format_ident!("{}_values", field_name))
+}
 
 fn convert_map_to_var(field_name: &Ident, path_keys: &Path, path_values: &Path) -> Box<dyn ToTokens> {
-    let field_name_keys = format_ident!("{}_keys", field_name);
-    let field_name_values = format_ident!("{}_values", field_name);
-    let field_name_count = format_ident!("{}_count", field_name);
+    let (field_name_count, field_name_keys, field_name_values) = map_idents(field_name);
     let converted_field_value_keys = convert_path_to_field_type(path_keys);
     let converted_field_value_values = convert_path_to_field_type(path_values);
     // println!("convert_map_to_var: {:?} {:?} {:?}", field_name, path_keys, path_values);
