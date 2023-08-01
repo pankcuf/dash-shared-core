@@ -530,10 +530,10 @@ fn convert_path_arguments(field: &Field, path_args: &PathArguments) -> TokenStre
     }
 }
 
-fn extract_struct_field(f: &Field) -> Box<dyn ToTokens> {
+fn extract_struct_field(f: &Field) -> TokenStream2 {
     let field_name = &f.ident.clone().unwrap();
     let field_type = &f.ty;
-    Box::new(match field_type {
+    match field_type {
         Type::Array(_type_arr) => convert_vec_to_var(f),
         Type::Path(type_path) => {
             let path = &type_path.path;
@@ -559,7 +559,7 @@ fn extract_struct_field(f: &Field) -> Box<dyn ToTokens> {
             }
         },
         _ => panic!("Can't extract struct field")
-    })
+    }
 }
 
 fn impl_interface(ffi_name: TokenStream2, target_name: TokenStream2, ffi_from_conversion: TokenStream2, ffi_to_conversion: TokenStream2) -> TokenStream2 {
@@ -631,7 +631,7 @@ fn from_named_struct(fields: &FieldsNamed, target_name: Ident, input: &DeriveInp
             _ => define_field(quote!(#field_name), ffi_deref_field_name(quote!(#field_name))),
         })
     }).collect::<Vec<_>>();
-    let struct_fields = fields.named.iter().map(|f| extract_struct_field(f)).collect::<Vec<_>>();
+    let struct_fields = fields.named.iter().map(|f| Box::new(extract_struct_field(f))).collect::<Vec<_>>();
     let ffi_name = ffi_struct_name(&ffi_name);
     let ffi_struct = quote! {
         #[repr(C)]
