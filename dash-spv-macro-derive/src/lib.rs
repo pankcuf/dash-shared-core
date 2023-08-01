@@ -603,9 +603,6 @@ fn from_unnamed_struct(fields: &FieldsUnnamed, target_name: Ident, input: &Deriv
                 // quote!(#obj.0),
             )
         },
-        Type::Ptr(ptr) => {
-            panic!("from_unnamed_struct (ptr) {:?}", ptr)
-        },
         Type::Array(ffi_name) => {
             impl_interface(
                 quote!(#ffi_name),
@@ -680,14 +677,14 @@ fn from_enum_variant(variant: &Variant, _index: usize) -> TokenStream2 {
             let extract_field_value_type = |field: &Field| {
                 let field_type = &field.ty;
                 match field_type {
-                    Type::Array(_type_arr) => Box::new(quote!(*mut *mut #field_type, usize)),
+                    Type::Array(_type_arr) => quote!(*mut *mut #field_type, usize),
                     Type::Path(type_path) => {
                         let path = &type_path.path;
                         let segment = path.segments.last().unwrap();
                         let ident = &segment.ident;
                         let args = &segment.arguments;
                         match ident.to_string().as_str() {
-                            "Vec" => Box::new(quote!(*mut *mut #field_type, usize)),
+                            "Vec" => quote!(*mut *mut #field_type, usize),
                             "BTreeMap" | "HashMap" => {
                                 match &args {
                                     PathArguments::AngleBracketed(args) => {
@@ -696,9 +693,9 @@ fn from_enum_variant(variant: &Variant, _index: usize) -> TokenStream2 {
                                             [GenericArgument::Type(Type::Path(type_keys)), GenericArgument::Type(Type::Path(type_values)), ..] => {
                                                 let field_value_keys = &type_keys.path.segments.last().unwrap().ident;
                                                 let field_value_values = &type_values.path.segments.last().unwrap().ident;
-                                                Box::new(quote!(*mut *mut #field_value_keys, *mut *mut #field_value_values, usize))
+                                                quote!(*mut *mut #field_value_keys, *mut *mut #field_value_values, usize)
                                             },
-                                            [GenericArgument::Type(Type::Path(inner_path))] => Box::new(convert_path_to_field_type(&inner_path.path)),
+                                            [GenericArgument::Type(Type::Path(inner_path))] => convert_path_to_field_type(&inner_path.path),
                                             _ => panic!("from_path: Unknown field {:?}", args)
                                         }
                                     }
@@ -711,7 +708,7 @@ fn from_enum_variant(variant: &Variant, _index: usize) -> TokenStream2 {
                                     PathArguments::AngleBracketed(args) => {
                                         let args = &args.args.iter().collect::<Vec<_>>();
                                         match &args[..] {
-                                            [GenericArgument::Type(Type::Path(inner_path))] => Box::new(convert_path_to_field_type(&inner_path.path)),
+                                            [GenericArgument::Type(Type::Path(inner_path))] => convert_path_to_field_type(&inner_path.path),
                                             _ => panic!("from_path: Unknown field {:?}", args)
                                         }
                                     }
@@ -720,7 +717,7 @@ fn from_enum_variant(variant: &Variant, _index: usize) -> TokenStream2 {
                             },
                             _ => {
                                 let converted_type = convert_path_to_field_type(path);
-                                Box::new(quote!(#variant_name(#converted_type)))
+                                quote!(#variant_name(#converted_type))
                             }
                         }
                     },
@@ -729,8 +726,8 @@ fn from_enum_variant(variant: &Variant, _index: usize) -> TokenStream2 {
             };
             let f = &variant.fields;
             let enum_fields = match f {
-                Fields::Named(ref fields) => fields.named.iter().map(|f| extract_field_value_type(f)).collect::<Vec<_>>(),
-                Fields::Unnamed(ref fields) => fields.unnamed.iter().map(|f| extract_field_value_type(f)).collect::<Vec<_>>(),
+                Fields::Named(ref fields) => fields.named.iter().map(|f| Box::new(extract_field_value_type(f))).collect::<Vec<_>>(),
+                Fields::Unnamed(ref fields) => fields.unnamed.iter().map(|f| Box::new(extract_field_value_type(f))).collect::<Vec<_>>(),
                 Fields::Unit => vec![Box::new(quote!(#variant_name))],
             };
             quote!(#(#enum_fields)*)
