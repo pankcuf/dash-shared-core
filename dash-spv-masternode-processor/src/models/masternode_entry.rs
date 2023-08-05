@@ -1,13 +1,13 @@
-use byte::{BytesExt, TryRead};
-use std::collections::BTreeMap;
-#[cfg(feature = "generate-dashj-tests")]
-use serde::{Serialize, Serializer};
-#[cfg(feature = "generate-dashj-tests")]
-use serde::ser::SerializeStruct;
 use crate::chain::constants::CORE_PROTO_19_2;
 use crate::consensus::Encodable;
-use crate::crypto::{UInt160, UInt256, byte_util::Zeroable};
+use crate::crypto::{byte_util::Zeroable, UInt160, UInt256};
 use crate::util::data_ops::short_hex_string_from;
+use byte::{BytesExt, TryRead};
+#[cfg(feature = "generate-dashj-tests")]
+use serde::ser::SerializeStruct;
+#[cfg(feature = "generate-dashj-tests")]
+use serde::{Serialize, Serializer};
+use std::collections::BTreeMap;
 
 // (block height, list diff version (2: BLSBasic), protocol_version)
 #[derive(Clone, Copy)]
@@ -22,7 +22,10 @@ pub struct MasternodeEntry {
     // TODO: migrate on SocketAddr
     pub socket_address: crate::common::socket_address::SocketAddress,
     pub operator_public_key: crate::models::operator_public_key::OperatorPublicKey,
-    pub previous_operator_public_keys: BTreeMap<crate::common::block::Block, crate::models::operator_public_key::OperatorPublicKey>,
+    pub previous_operator_public_keys: BTreeMap<
+        crate::common::block::Block,
+        crate::models::operator_public_key::OperatorPublicKey,
+    >,
     pub previous_entry_hashes: BTreeMap<crate::common::block::Block, UInt256>,
     pub previous_validity: BTreeMap<crate::common::block::Block, bool>,
     pub known_confirmed_at_height: Option<u32>,
@@ -37,9 +40,15 @@ pub struct MasternodeEntry {
 
 #[cfg(feature = "generate-dashj-tests")]
 impl Serialize for MasternodeEntry {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
         let mut state = serializer.serialize_struct("MasternodeEntry", 10)?;
-        state.serialize_field("provider_registration_transaction_hash", &self.provider_registration_transaction_hash)?;
+        state.serialize_field(
+            "provider_registration_transaction_hash",
+            &self.provider_registration_transaction_hash,
+        )?;
         state.serialize_field("confirmed_hash", &self.confirmed_hash)?;
         state.serialize_field("ip_address", &self.socket_address.ip_address)?;
         state.serialize_field("port", &self.socket_address.port)?;
@@ -51,7 +60,6 @@ impl Serialize for MasternodeEntry {
         state.serialize_field("platform_node_id", &self.platform_node_id)?;
         state.serialize_field("version", &self.version)?;
         state.end()
-
     }
 }
 
@@ -74,9 +82,15 @@ impl std::fmt::Debug for MasternodeEntry {
         let prev_v = CustomDebugBTreeMap(self.previous_validity.clone());
         let prev_o = CustomDebugBTreeMap(self.previous_operator_public_keys.clone());
         f.debug_struct("MasternodeEntry")
-            .field("provider_registration_transaction_hash", &self.provider_registration_transaction_hash)
+            .field(
+                "provider_registration_transaction_hash",
+                &self.provider_registration_transaction_hash,
+            )
             .field("confirmed_hash", &self.confirmed_hash)
-            .field("confirmed_hash_hashed_with_provider_registration_transaction_hash", &self.confirmed_hash_hashed_with_provider_registration_transaction_hash)
+            .field(
+                "confirmed_hash_hashed_with_provider_registration_transaction_hash",
+                &self.confirmed_hash_hashed_with_provider_registration_transaction_hash,
+            )
             .field("socket_address", &self.socket_address)
             .field("operator_public_key", &self.operator_public_key.data)
             .field("version", &self.operator_public_key.version)
@@ -97,7 +111,7 @@ impl std::fmt::Debug for MasternodeEntry {
 
 impl<'a> TryRead<'a, MasternodeReadContext> for MasternodeEntry {
     fn try_read(bytes: &'a [u8], context: MasternodeReadContext) -> byte::Result<(Self, usize)> {
-        let MasternodeReadContext (block_height, diff_version, protocol_version) = context;
+        let MasternodeReadContext(block_height, diff_version, protocol_version) = context;
         let offset = &mut 0;
         let version = if protocol_version >= CORE_PROTO_19_2 {
             bytes.read_with::<u16>(offset, byte::LE)?
@@ -108,21 +122,24 @@ impl<'a> TryRead<'a, MasternodeReadContext> for MasternodeEntry {
             bytes.read_with::<UInt256>(offset, byte::LE)?;
         let confirmed_hash = bytes.read_with::<UInt256>(offset, byte::LE)?;
         let socket_address = bytes.read_with::<crate::common::SocketAddress>(offset, ())?;
-        let operator_public_key = bytes.read_with::<crate::models::OperatorPublicKey>(offset, (version, protocol_version))?;
+        let operator_public_key = bytes
+            .read_with::<crate::models::OperatorPublicKey>(offset, (version, protocol_version))?;
         let key_id_voting = bytes.read_with::<UInt160>(offset, byte::LE)?;
-        let is_valid = bytes.read_with::<u8>(offset, byte::LE)
-            .unwrap_or(0);
-         let mn_type = if version >= 2 {
+        let is_valid = bytes.read_with::<u8>(offset, byte::LE).unwrap_or(0);
+        let mn_type = if version >= 2 {
             bytes.read_with::<crate::common::MasternodeType>(offset, byte::LE)?
         } else {
-             crate::common::masternode_type::MasternodeType::Regular
+            crate::common::masternode_type::MasternodeType::Regular
         };
-        let (platform_http_port, platform_node_id) = if mn_type == crate::common::MasternodeType::HighPerformance {
-            (bytes.read_with::<u16>(offset, byte::BE)?,
-             bytes.read_with::<UInt160>(offset, byte::LE)?)
-        } else {
-            (0u16, UInt160::MIN)
-        };
+        let (platform_http_port, platform_node_id) =
+            if mn_type == crate::common::MasternodeType::HighPerformance {
+                (
+                    bytes.read_with::<u16>(offset, byte::BE)?,
+                    bytes.read_with::<UInt160>(offset, byte::LE)?,
+                )
+            } else {
+                (0u16, UInt160::MIN)
+            };
         let mut entry = Self::new(
             version,
             provider_registration_transaction_hash,
@@ -135,7 +152,7 @@ impl<'a> TryRead<'a, MasternodeReadContext> for MasternodeEntry {
             platform_http_port,
             platform_node_id,
             block_height,
-            protocol_version
+            protocol_version,
         );
         if !entry.confirmed_hash.is_zero() && block_height != u32::MAX {
             entry.known_confirmed_at_height = Some(block_height);
@@ -226,8 +243,7 @@ impl MasternodeEntry {
 
     pub fn confirmed_hash_at(&self, block_height: u32) -> Option<UInt256> {
         self.known_confirmed_at_height
-            .and_then(|h| (h <= block_height)
-                .then_some(self.confirmed_hash))
+            .and_then(|h| (h <= block_height).then_some(self.confirmed_hash))
     }
 
     pub fn update_confirmed_hash(&mut self, hash: UInt256) {
@@ -238,7 +254,10 @@ impl MasternodeEntry {
     }
 
     pub fn update_confirmed_hash_hashed_with_pro_reg_tx_hash(&mut self) {
-        let hash = Self::hash_confirmed_hash(self.confirmed_hash, self.provider_registration_transaction_hash);
+        let hash = Self::hash_confirmed_hash(
+            self.confirmed_hash,
+            self.provider_registration_transaction_hash,
+        );
         self.confirmed_hash_hashed_with_provider_registration_transaction_hash = Some(hash)
     }
 
@@ -246,7 +265,9 @@ impl MasternodeEntry {
         &self,
         block_height: u32,
     ) -> Option<UInt256> {
-        if self.known_confirmed_at_height.is_none() || self.known_confirmed_at_height? <= block_height {
+        if self.known_confirmed_at_height.is_none()
+            || self.known_confirmed_at_height? <= block_height
+        {
             self.confirmed_hash_hashed_with_provider_registration_transaction_hash
         } else {
             Some(Self::hash_confirmed_hash(
@@ -274,7 +295,10 @@ impl MasternodeEntry {
         )
     }*/
 
-    pub fn hash_confirmed_hash(confirmed_hash: UInt256, provider_registration_transaction_hash: UInt256) -> UInt256 {
+    pub fn hash_confirmed_hash(
+        confirmed_hash: UInt256,
+        provider_registration_transaction_hash: UInt256,
+    ) -> UInt256 {
         UInt256::sha256(&[provider_registration_transaction_hash.0, confirmed_hash.0].concat())
     }
 
@@ -341,7 +365,12 @@ impl MasternodeEntry {
         short_hex_string_from(&self.provider_registration_transaction_hash.0)
     }
 
-    pub fn update_with_previous_entry(&mut self, entry: &mut MasternodeEntry, block_height: u32, block_hash: UInt256) {
+    pub fn update_with_previous_entry(
+        &mut self,
+        entry: &mut MasternodeEntry,
+        block_height: u32,
+        block_hash: UInt256,
+    ) {
         let block = crate::common::Block::new(block_height, block_hash);
         self.previous_validity = entry
             .previous_validity
@@ -359,7 +388,8 @@ impl MasternodeEntry {
             .filter(|(block, _)| block.height < self.update_height)
             .collect();
         if entry.operator_public_key_at(self.update_height) != self.operator_public_key {
-            self.previous_operator_public_keys.insert(block, entry.operator_public_key);
+            self.previous_operator_public_keys
+                .insert(block, entry.operator_public_key);
         }
         let old_prev_mn_entry_hashes = entry
             .previous_entry_hashes
@@ -373,3 +403,6 @@ impl MasternodeEntry {
         }
     }
 }
+
+
+

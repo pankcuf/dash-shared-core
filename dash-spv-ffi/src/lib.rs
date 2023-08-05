@@ -90,3 +90,10 @@ pub fn convert_vec_to_fixed_array<const N: usize>(data: &Vec<u8>) -> *mut [u8; N
     boxed(fixed_array)
 }
 
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct Map<K, V> {
+    pub count: usize,
+    pub keys: *mut K,
+    pub values: *mut V,
+}

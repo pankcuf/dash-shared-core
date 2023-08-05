@@ -1,6 +1,6 @@
-use crate::chain::common::LLMQType;
-use crate::common::LLMQVersion;
-use crate::consensus::{encode::VarInt, Encodable, WriteExt};
+// use crate::chain::common::LLMQType;
+// use crate::common::LLMQVersion;
+use crate::consensus::{Encodable, WriteExt};
 use crate::crypto::{byte_util::AsBytes, data_ops::Data, UInt256, UInt384, UInt768};
 use crate::keys::BLSKey;
 use crate::models;
@@ -103,18 +103,18 @@ impl std::fmt::Debug for LLMQEntry {
 impl<'a> TryRead<'a, Endian> for LLMQEntry {
     fn try_read(bytes: &'a [u8], _ctx: Endian) -> byte::Result<(Self, usize)> {
         let offset = &mut 0;
-        let version = bytes.read_with::<LLMQVersion>(offset, LE)?;
-        let llmq_type = bytes.read_with::<LLMQType>(offset, LE)?;
+        let version = bytes.read_with::<crate::common::LLMQVersion>(offset, LE)?;
+        let llmq_type = bytes.read_with::<crate::chain::common::LLMQType>(offset, LE)?;
         let llmq_hash = bytes.read_with::<UInt256>(offset, LE)?;
         let index = if version.use_rotated_quorums() {
             Some(bytes.read_with::<u16>(offset, LE)?)
         } else {
             None
         };
-        let signers_count = bytes.read_with::<VarInt>(offset, LE)?;
+        let signers_count = bytes.read_with::<crate::consensus::encode::VarInt>(offset, LE)?;
         let signers_buffer_length: usize = ((signers_count.0 as usize) + 7) / 8;
         let signers_bitset: &[u8] = bytes.read_with(offset, Bytes::Len(signers_buffer_length))?;
-        let valid_members_count = bytes.read_with::<VarInt>(offset, LE)?;
+        let valid_members_count = bytes.read_with::<crate::consensus::encode::VarInt>(offset, LE)?;
         let valid_members_count_buffer_length: usize = ((valid_members_count.0 as usize) + 7) / 8;
         let valid_members_bitset: &[u8] =
             bytes.read_with(offset, Bytes::Len(valid_members_count_buffer_length))?;
@@ -143,12 +143,12 @@ impl<'a> TryRead<'a, Endian> for LLMQEntry {
 impl LLMQEntry {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        version: LLMQVersion,
-        llmq_type: LLMQType,
+        version: crate::common::LLMQVersion,
+        llmq_type: crate::chain::common::LLMQType,
         llmq_hash: UInt256,
         index: Option<u16>,
-        signers_count: VarInt,
-        valid_members_count: VarInt,
+        signers_count: crate::consensus::encode::VarInt,
+        valid_members_count: crate::consensus::encode::VarInt,
         signers_bitset: Vec<u8>,
         valid_members_bitset: Vec<u8>,
         public_key: UInt384,
@@ -194,13 +194,13 @@ impl LLMQEntry {
 
     #[allow(clippy::too_many_arguments)]
     pub fn generate_data(
-        version: LLMQVersion,
-        llmq_type: LLMQType,
+        version: crate::common::LLMQVersion,
+        llmq_type: crate::chain::common::LLMQType,
         llmq_hash: UInt256,
         llmq_index: Option<u16>,
-        signers_count: VarInt,
+        signers_count: crate::consensus::encode::VarInt,
         signers_bitset: &[u8],
-        valid_members_count: VarInt,
+        valid_members_count: crate::consensus::encode::VarInt,
         valid_members_bitset: &[u8],
         public_key: UInt384,
         verification_vector_hash: UInt256,
@@ -247,9 +247,9 @@ impl LLMQEntry {
         )
     }
 
-    pub fn build_llmq_quorum_hash(llmq_type: LLMQType, llmq_hash: UInt256) -> UInt256 {
+    pub fn build_llmq_quorum_hash(llmq_type: crate::chain::common::LLMQType, llmq_hash: UInt256) -> UInt256 {
         let mut writer: Vec<u8> = Vec::with_capacity(33);
-        VarInt(llmq_type as u64).enc(&mut writer);
+        crate::consensus::encode::VarInt(llmq_type as u64).enc(&mut writer);
         llmq_hash.enc(&mut writer);
         UInt256::sha256d(writer)
     }
@@ -261,7 +261,7 @@ impl LLMQEntry {
     pub fn commitment_data(&self) -> Vec<u8> {
         let mut buffer: Vec<u8> = Vec::new();
         let offset: &mut usize = &mut 0;
-        let llmq_type = VarInt(self.llmq_type as u64);
+        let llmq_type = crate::consensus::encode::VarInt(self.llmq_type as u64);
         *offset += llmq_type.enc(&mut buffer);
         *offset += self.llmq_hash.enc(&mut buffer);
         *offset += self.valid_members_count.enc(&mut buffer);
@@ -275,9 +275,9 @@ impl LLMQEntry {
     pub fn ordering_hash_for_request_id(
         &self,
         request_id: UInt256,
-        llmq_type: LLMQType,
+        llmq_type: crate::chain::common::LLMQType,
     ) -> UInt256 {
-        let llmq_type = VarInt(llmq_type as u64);
+        let llmq_type = crate::consensus::encode::VarInt(llmq_type as u64);
         let mut buffer: Vec<u8> = Vec::with_capacity(llmq_type.len() + 64);
         llmq_type.enc(&mut buffer);
         self.llmq_hash.enc(&mut buffer);
@@ -292,7 +292,7 @@ impl LLMQEntry {
         self.commitment_hash.unwrap()
     }
 
-    fn validate_bitset(bitset: Vec<u8>, count: VarInt) -> bool {
+    fn validate_bitset(bitset: Vec<u8>, count: crate::consensus::encode::VarInt) -> bool {
         if bitset.len() != (count.0 as usize + 7) / 8 {
             warn!(
                 "Error: The byte size of the bitvectors ({}) must match “(quorumSize + 7) / 8 ({})",
@@ -425,3 +425,5 @@ impl LLMQEntry {
         true
     }
 }
+
+

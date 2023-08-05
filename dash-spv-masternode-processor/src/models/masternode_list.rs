@@ -17,7 +17,10 @@ pub struct MasternodeList {
     pub masternode_merkle_root: Option<UInt256>,
     pub llmq_merkle_root: Option<UInt256>,
     pub masternodes: BTreeMap<UInt256, crate::models::masternode_entry::MasternodeEntry>,
-    pub quorums: BTreeMap<crate::chain::common::llmq_type::LLMQType, BTreeMap<UInt256, crate::models::llmq_entry::LLMQEntry>>,
+    pub quorums: BTreeMap<
+        crate::chain::common::llmq_type::LLMQType,
+        BTreeMap<UInt256, crate::models::llmq_entry::LLMQEntry>,
+    >,
 }
 
 impl Default for MasternodeList {
