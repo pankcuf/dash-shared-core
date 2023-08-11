@@ -92,8 +92,21 @@ pub fn convert_vec_to_fixed_array<const N: usize>(data: &Vec<u8>) -> *mut [u8; N
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
-pub struct Map<K, V> {
+pub struct MapFFI<K, V> {
     pub count: usize,
     pub keys: *mut K,
     pub values: *mut V,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct VecFFI<V> {
+    pub count: usize,
+    pub values: *mut V,
+}
+
+impl<V> VecFFI<V> {
+    pub fn new(vec: Vec<V>) -> VecFFI<V> {
+        Self { count: vec.len(), values: boxed_vec(vec) }
+    }
 }

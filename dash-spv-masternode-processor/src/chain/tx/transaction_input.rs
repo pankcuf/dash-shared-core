@@ -1,15 +1,16 @@
-use byte::{BytesExt, LE, TryRead};
-use byte::ctx::Endian;
-use hashes::hex::ToHex;
 use crate::chain::common::DevnetType;
-use crate::crypto::{UInt256, VarBytes};
 use crate::crypto::byte_util::BytesDecodable;
 use crate::crypto::utxo::UTXO;
+use crate::crypto::{UInt256, VarBytes};
 use crate::impl_bytes_decodable;
+use byte::ctx::Endian;
+use byte::{BytesExt, TryRead, LE};
+use hashes::hex::ToHex;
 // use crate::storage::models::tx::transaction_input::TransactionInputEntity;
 use crate::util::data_append::DataAppend;
 
 #[derive(Clone, Default, PartialEq)]
+#[dash_spv_macro_derive::impl_ffi_conv]
 pub struct TransactionInput {
     pub input_hash: UInt256,
     pub index: u32,
@@ -66,7 +67,10 @@ impl TransactionInput {
     pub fn coinbase(devnet_type: DevnetType, protocol_version: u32) -> Self {
         TransactionInput {
             index: u32::MAX,
-            signature: Some(Vec::<u8>::devnet_genesis_coinbase_message(devnet_type, protocol_version)),
+            signature: Some(Vec::<u8>::devnet_genesis_coinbase_message(
+                devnet_type,
+                protocol_version,
+            )),
             sequence: u32::MAX,
             ..Default::default()
         }
@@ -83,6 +87,9 @@ impl TransactionInput {
     }*/
 
     pub fn outpoint(&self) -> UTXO {
-        UTXO { hash: self.input_hash, n: self.index }
+        UTXO {
+            hash: self.input_hash,
+            n: self.index,
+        }
     }
 }

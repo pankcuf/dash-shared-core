@@ -8,6 +8,7 @@ use crate::impl_bytes_decodable;
 use crate::util::address::address;
 
 #[derive(Clone, Default, PartialEq)]
+#[dash_spv_macro_derive::impl_ffi_conv]
 pub struct TransactionOutput {
     pub amount: u64,
     pub script: Option<Vec<u8>>,

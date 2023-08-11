@@ -114,7 +114,8 @@ impl<'a> TryRead<'a, Endian> for LLMQEntry {
         let signers_count = bytes.read_with::<crate::consensus::encode::VarInt>(offset, LE)?;
         let signers_buffer_length: usize = ((signers_count.0 as usize) + 7) / 8;
         let signers_bitset: &[u8] = bytes.read_with(offset, Bytes::Len(signers_buffer_length))?;
-        let valid_members_count = bytes.read_with::<crate::consensus::encode::VarInt>(offset, LE)?;
+        let valid_members_count =
+            bytes.read_with::<crate::consensus::encode::VarInt>(offset, LE)?;
         let valid_members_count_buffer_length: usize = ((valid_members_count.0 as usize) + 7) / 8;
         let valid_members_bitset: &[u8] =
             bytes.read_with(offset, Bytes::Len(valid_members_count_buffer_length))?;
@@ -247,7 +248,10 @@ impl LLMQEntry {
         )
     }
 
-    pub fn build_llmq_quorum_hash(llmq_type: crate::chain::common::LLMQType, llmq_hash: UInt256) -> UInt256 {
+    pub fn build_llmq_quorum_hash(
+        llmq_type: crate::chain::common::LLMQType,
+        llmq_hash: UInt256,
+    ) -> UInt256 {
         let mut writer: Vec<u8> = Vec::with_capacity(33);
         crate::consensus::encode::VarInt(llmq_type as u64).enc(&mut writer);
         llmq_hash.enc(&mut writer);

@@ -15,6 +15,7 @@ use crate::util::data_append::DataAppend;
 use crate::util::Shared;
 
 #[derive(Debug, Default, Clone)]
+#[dash_spv_macro_derive::impl_ffi_conv]
 pub struct CoinbaseTransaction {
     pub base: Transaction,
     pub coinbase_transaction_version: u16,

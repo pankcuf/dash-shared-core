@@ -1,4 +1,5 @@
 #[derive(Clone, Debug, Default)]
+#[dash_spv_macro_derive::impl_ffi_conv]
 pub enum TransactionPersistenceStatus {
     #[default]
     NotSaved,

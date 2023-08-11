@@ -67,7 +67,7 @@ pub unsafe extern "C" fn process_qrinfo_from_message(
     context: *const std::ffi::c_void,
 ) -> *mut types::QRInfoResultFFI {
     let instant = std::time::Instant::now();
-    let message: &[u8] = slice::from_raw_parts(message, message_length as usize);
+    let message: &[u8] = slice::from_raw_parts(message, message_length);
     let processor = &mut *processor;
     let cache = &mut *cache;
     processor.opaque_context = context;
